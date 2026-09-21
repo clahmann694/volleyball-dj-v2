@@ -6,9 +6,18 @@ import { migrateBoard } from '../storage/boardStore';
  * Ein Bundle (.vbdj) ist ein ZIP mit board.json und allen Audiodateien.
  * Damit wandert die komplette Einrichtung vom Mac aufs iPad - oder ins Backup.
  */
+/** Nachgeladene Bausteine fehlen nach einem Update auf dem Server, solange die alte Seite offen ist. */
+async function loadZip() {
+  try {
+    return (await import('jszip')).default;
+  } catch {
+    throw new Error('Die App wurde inzwischen aktualisiert – bitte die Seite neu laden und es noch einmal versuchen.');
+  }
+}
+
 export async function createBundle(board: BoardConfig): Promise<Blob> {
   // JSZip wird nur im Dev-Modus gebraucht - erst hier laden, nicht beim App-Start
-  const { default: JSZip } = await import('jszip');
+  const JSZip = await loadZip();
   const zip = new JSZip();
   zip.file('board.json', JSON.stringify(board, null, 2));
   const folder = zip.folder('files')!;
@@ -23,7 +32,7 @@ export async function createBundle(board: BoardConfig): Promise<Blob> {
 }
 
 export async function readBundle(file: Blob): Promise<BoardConfig> {
-  const { default: JSZip } = await import('jszip');
+  const JSZip = await loadZip();
   const zip = await JSZip.loadAsync(file);
   const json = await zip.file('board.json')?.async('string');
   if (!json) throw new Error('Kein board.json im Bundle gefunden.');

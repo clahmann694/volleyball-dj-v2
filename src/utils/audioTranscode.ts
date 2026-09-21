@@ -96,7 +96,15 @@ export async function transcodeToAac(input: Blob): Promise<TranscodeResult | nul
   }
 
   // Der Muxer wird nur beim Import gebraucht - erst hier laden, nicht beim App-Start
-  const { ArrayBufferTarget, Muxer } = await import('mp4-muxer');
+  let mux: typeof import('mp4-muxer');
+  try {
+    mux = await import('mp4-muxer');
+  } catch {
+    // Nach einem Update fehlt die alte Datei auf dem Server; dann Original speichern statt abbrechen
+    console.warn('mp4-muxer nicht ladbar (App aktualisiert?) - Original wird gespeichert');
+    return null;
+  }
+  const { ArrayBufferTarget, Muxer } = mux;
   const muxer = new Muxer({
     target: new ArrayBufferTarget(),
     audio: { codec: 'aac', sampleRate, numberOfChannels: channels },

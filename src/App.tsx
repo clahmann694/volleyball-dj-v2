@@ -61,7 +61,7 @@ function AppContent() {
     <div className="h-full flex flex-col text-white">
       <Header view={view} onChangeView={changeView} />
       {view === 'dj' ? (
-        <DjView panelPadId={panelPadId} onOpenPanel={setPanelPadId} onClosePanel={() => setPanelPadId(null)} />
+        <DjView panelPadId={panelPadId} onOpenPanel={setPanelPadId} onClosePanel={() => setPanelPadId(null)} onGoToDev={() => changeView('dev')} />
       ) : (
         <DeveloperView editingClipId={editingClipId} onEditClip={setEditingClipId} onCloseEditor={() => setEditingClipId(null)} />
       )}
