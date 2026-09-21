@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { BoardConfig, SoundClip, SoundPad } from '../types';
-import { loadBoard, saveBoard } from '../storage/boardStore';
+import { loadBoard, markChanged, markExported, saveBoard } from '../storage/boardStore';
 import { deleteFile, putFile, requestPersistence } from '../storage/audioStore';
 import { DEFAULT_BOARD } from '../config/defaultBoard';
 import { newId } from '../utils/id';
@@ -46,7 +46,13 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   const [board, setBoard] = useState<BoardConfig>(loadBoard);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => saveBoard(board), [board]);
+  // Das beim Start geladene Objekt zaehlt nicht als Aenderung (identitaetsbasiert,
+  // damit auch Reacts doppelte Effekt-Ausfuehrung im Dev-Modus nicht faelschlich markiert)
+  const loadedBoard = React.useRef(board);
+  useEffect(() => {
+    saveBoard(board);
+    if (board !== loadedBoard.current) markChanged();
+  }, [board]);
 
   const { padIndex, clipIndex } = useMemo(() => {
     const padIndex = new Map<string, SoundPad>();
@@ -157,7 +163,11 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     [clipIndex]
   );
 
-  const exportBoard = useCallback(() => createBundle(board), [board]);
+  const exportBoard = useCallback(async () => {
+    const blob = await createBundle(board);
+    markExported();
+    return blob;
+  }, [board]);
 
   const importBoard = useCallback(async (file: File) => {
     setBusy(true);

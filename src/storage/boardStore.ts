@@ -32,17 +32,44 @@ export function migrateBoard(raw: unknown): BoardConfig | null {
   return null;
 }
 
+const LAST_EXPORT_KEY = 'vbdj-v2-last-export';
+const LAST_CHANGE_KEY = 'vbdj-v2-last-change';
+
 export function loadBoard(): BoardConfig {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const migrated = migrateBoard(JSON.parse(raw));
-      if (migrated) return migrated;
+      const parsed = JSON.parse(raw) as { version?: number };
+      const migrated = migrateBoard(parsed);
+      if (migrated) {
+        // Sicherheitskopie des alten Formats, falls eine Migration je etwas verliert
+        if (parsed.version !== migrated.version) {
+          localStorage.setItem(`${KEY}.backup-v${parsed.version ?? 0}-${new Date().toISOString().slice(0, 10)}`, raw);
+        }
+        return migrated;
+      }
     }
   } catch {
     /* kaputte Daten -> Standard */
   }
   return DEFAULT_BOARD;
+}
+
+/** Zeitpunkt des letzten Exports (ms) oder null */
+export function getLastExport(): number | null {
+  const v = Number(localStorage.getItem(LAST_EXPORT_KEY));
+  return v > 0 ? v : null;
+}
+export function markExported(): void {
+  localStorage.setItem(LAST_EXPORT_KEY, String(Date.now()));
+}
+/** Zeitpunkt der letzten inhaltlichen Aenderung (ms) oder null */
+export function getLastChange(): number | null {
+  const v = Number(localStorage.getItem(LAST_CHANGE_KEY));
+  return v > 0 ? v : null;
+}
+export function markChanged(): void {
+  localStorage.setItem(LAST_CHANGE_KEY, String(Date.now()));
 }
 
 export function saveBoard(board: BoardConfig): void {

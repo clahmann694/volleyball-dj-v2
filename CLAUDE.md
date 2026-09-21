@@ -76,7 +76,18 @@ src/
 - A clip with `cue.end === null` plays to the end of the file; `clip.duration` is read at import (`readDuration`) and refined by the cue editor (`decodeAudioData`).
 - Keep playback exclusive: starting a clip tears down the previous Howl (`teardown()` calls `off()` first so no stale events fire).
 
-### Storage
+### Storage – the user's data lives ONLY in her browsers
+The user has real sounds and cue points in Safari on her MacBook and iPhone/iPad, stored per origin
+(`clahmann694.github.io`). Nothing on the dev server (`localhost:3000`, a different origin) or in headless-Chrome
+tests can touch that. What CAN destroy her data – never do these without an explicit, separate confirmation:
+- renaming the IndexedDB (`vbdj-v2` / store `files`), the localStorage keys (`vbdj-v2-board`, `vbdj-v2-last-export`,
+  `vbdj-v2-last-change`), or the GitHub Pages URL/repo name (new origin = empty storage from the app's view);
+- a data-model bump without a tested `migrateBoard` path (test with a real fixture of the previous version; the
+  loader writes `vbdj-v2-board.backup-v<N>-<date>` before migrating – keep that);
+- "Zurücksetzen" and bundle import replace everything on that device (both `window.confirm`).
+The Dev view shows an export-reminder (amber when changed since last export); the `.vbdj` export is her only
+backup – keep export/import backwards compatible.
+
 - Audio files are per device (IndexedDB). Never assume a `fileId` has a blob – handle "missing" gracefully (`play()` shows an error toast).
 - Deleting a clip/pad deletes its blob; import/reset call `deleteOrphanFiles`.
 - The bundle import `<input type=file>` has **no `accept` attribute on purpose**: iOS maps `accept` extensions to UTIs and greys out files with unknown extensions such as `.vbdj` in the picker (found on the user's iPhone 2026-09-21). Validate after reading instead. Don't rename bundles to `.zip` either – Safari on macOS auto-expands "safe" downloads and the user loses the file.

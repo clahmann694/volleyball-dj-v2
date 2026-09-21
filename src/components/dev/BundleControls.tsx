@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useBoard } from '../../contexts/BoardContext';
 import { storageInfo } from '../../storage/audioStore';
+import { getLastChange, getLastExport } from '../../storage/boardStore';
 import { downloadBlob } from '../../utils/bundle';
 import { formatBytes } from '../../utils/audioFormat';
 
@@ -13,6 +14,11 @@ export function BundleControls() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const clipCount = board.pads.reduce((n, p) => n + p.clips.length, 0);
+  // Sicherungsstatus: geaendert seit letztem Export?
+  const lastExport = getLastExport();
+  const lastChange = getLastChange();
+  const unsaved = clipCount > 0 && (lastExport === null || (lastChange !== null && lastChange > lastExport));
+  const fmtDate = (ms: number) => new Date(ms).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   useEffect(() => {
     let alive = true;
@@ -109,6 +115,15 @@ export function BundleControls() {
         )}
       </div>
       {(working || message) && <p className="mt-2 text-sm text-vsg-ice">{working ?? message}</p>}
+      {clipCount > 0 && (
+        <p className={`mt-2 text-sm font-medium ${unsaved ? 'text-amber-300' : 'text-vsg-green'}`}>
+          {unsaved
+            ? lastExport
+              ? `⚠︎ Änderungen seit dem letzten Export (${fmtDate(lastExport)}) – jetzt sichern.`
+              : '⚠︎ Noch nie exportiert – bitte sichern, die Sounds liegen nur in diesem Browser.'
+            : `✓ Gesichert – letzter Export ${fmtDate(lastExport!)}.`}
+        </p>
+      )}
       <p className="mt-2 text-xs text-white/40">
         Ein Bundle (.vbdj) enthält alle Buttons, Cue-Points und Audiodateien. Es lässt sich nicht mit einem Programm öffnen – nur hier über
         „Importieren“ laden. So ziehst du die Einrichtung vom Mac aufs iPad (AirDrop) oder legst ein Backup an. Achtung: Import ersetzt die
