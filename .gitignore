@@ -1,0 +1,42 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# PWA dev output
+dev-dist
+
+# Audio files and setup bundles never go to GitHub (copyright, size).
+# Sounds live in the browser (IndexedDB) and travel as .vbdj bundles.
+*.mp3
+*.m4a
+*.mp4
+*.aac
+*.wav
+*.ogg
+*.oga
+*.flac
+*.aif
+*.aiff
+*.vbdj
+public/sounds/
