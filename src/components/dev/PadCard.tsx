@@ -93,9 +93,9 @@ export function PadCard({ pad, index, total, onEditClip }: Props) {
       <div className="mt-2 flex items-center gap-3 text-xs">
         <input ref={fileInput} type="file" accept={ACCEPT} multiple hidden onChange={onFileChange} />
         <button onClick={() => fileInput.current?.click()} disabled={busy || importing} className="px-3 py-1.5 rounded-lg bg-vsg-blue hover:bg-vsg-cyan disabled:opacity-50 font-medium">
-          {importing ? 'Importiere…' : '＋ Dateien hinzufügen'}
+          {importing ? 'Importiere… (Ton wird extrahiert)' : '＋ Dateien hinzufügen'}
         </button>
-        <span className="text-white/40 hidden sm:inline">oder MP3/MP4 hierher ziehen – bei Videos zählt nur der Ton</span>
+        <span className="text-white/40 hidden sm:inline">oder MP3/MP4 hierher ziehen – aus Videos wird nur der Ton gespeichert</span>
         {notice && <span className="ml-auto text-vsg-green font-medium">{notice}</span>}
       </div>
     </div>

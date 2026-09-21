@@ -5,6 +5,7 @@ import { deleteFile, putFile, requestPersistence } from '../storage/audioStore';
 import { DEFAULT_BOARD } from '../config/defaultBoard';
 import { newId } from '../utils/id';
 import { cleanClipName, isAudioFile, readDuration } from '../utils/audioFormat';
+import { shouldCompress, transcodeToAac } from '../utils/audioTranscode';
 import { createBundle, deleteOrphanFiles, readBundle } from '../utils/bundle';
 
 /**
@@ -94,16 +95,36 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
       const clips: SoundClip[] = [];
       for (const file of files) {
         if (!isAudioFile(file)) continue;
+        let blob: Blob = file;
+        let fileName = file.name;
+        let mimeType = file.type || 'audio/mpeg';
+        let duration = await readDuration(file);
+
+        // Videos und unkomprimierte Dateien: nur die Tonspur behalten (AAC/M4A).
+        // Schlaegt das fehl, wird die Originaldatei unveraendert gespeichert.
+        if (shouldCompress(file, duration)) {
+          try {
+            const result = await transcodeToAac(file);
+            if (result) {
+              blob = result.blob;
+              fileName = file.name.replace(/\.[^./]+$/, '') + '.m4a';
+              mimeType = 'audio/mp4';
+              duration = result.duration;
+            }
+          } catch (e) {
+            console.warn('Tonspur-Extraktion fehlgeschlagen, speichere Original', e);
+          }
+        }
+
         const fileId = newId();
-        await putFile({ id: fileId, blob: file, name: file.name, type: file.type });
-        const duration = await readDuration(file);
+        await putFile({ id: fileId, blob, name: fileName, type: mimeType });
         clips.push({
           id: newId(),
           name: cleanClipName(file.name),
           fileId,
-          fileName: file.name,
-          mimeType: file.type || 'audio/mpeg',
-          size: file.size,
+          fileName,
+          mimeType,
+          size: blob.size,
           duration,
           cue: { start: 0, end: null },
         });

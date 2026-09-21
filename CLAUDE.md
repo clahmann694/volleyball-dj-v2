@@ -31,6 +31,7 @@ npm run type-check   # tsc --noEmit (strict, noUnusedLocals)
 - Howler.js for playback (`html5: true`, blob URLs, cue points as Howler **sprites**)
 - IndexedDB for audio blobs, localStorage for board config, JSZip for bundles
 - vite-plugin-pwa for the installable app shell
+- WebCodecs `AudioEncoder` + `mp4-muxer` to keep only the audio track of imported videos
 
 ### Data flow
 ```
@@ -58,7 +59,7 @@ src/
 │   ├── Header.tsx            # title + DJ/Dev toggle
 │   ├── dj/                   # DjView, SoundBoard (grid), SoundPad (3D button), ClipPanel, TransportBar
 │   └── dev/                  # DeveloperView, PadCard, ColorSwatches, ClipRow, CuePointEditor, Waveform, BundleControls
-├── utils/                    # audioFormat (mime/ext, duration), bundle (zip), waveform (peaks), formatTime, id
+├── utils/                    # audioFormat (mime/ext, duration), audioTranscode (video → AAC/M4A), bundle (zip), waveform (peaks), formatTime, id
 └── App.tsx                   # providers, view state, keyboard shortcuts (Space, Escape)
 ```
 
@@ -67,7 +68,11 @@ src/
 ### Audio
 - All playback goes through `AudioContext` – never instantiate `Howl` elsewhere.
 - Blob URLs have no extension, so `format` must be passed to Howler (`howlerFormat()`).
-- **Video files are accepted** (mp4/mov/m4v/webm) because the user downloads Instagram reels with a downloader app; only the audio track is played (`html5: true` uses an `<audio>` element, which plays the sound of video containers). `accept` includes `video/*` types so the iPad file picker offers the Photos library.
+- **Video files are accepted** (mp4/mov/m4v/webm) because the user downloads Instagram reels with a downloader app. `accept` includes `video/*` types so the iPad file picker offers the Photos library.
+- **Import strips video and compresses lossless audio** (`utils/audioTranscode.ts`, decided 2026-09-21 to save storage: an SD reel is ~3.5 MB, its audio 0.45 MB; HD reels 25 MB). Pipeline: `decodeAudioData` → WebCodecs `AudioEncoder` (AAC-LC 128 kbit/s, `bitrateMode: 'constant'`) → `mp4-muxer` → `.m4a`. `shouldCompress()` decides (video, wav/aiff/flac, or > 256 kbit/s); mp3/m4a/ogg are stored untouched. If `AudioEncoder` is missing or fails, the original file is stored – never block an import.
+- **Gotcha (cost half a day of debugging – don't regress):** browsers disagree about `EncodedAudioChunkMetadata.decoderConfig.description`. Chrome gives the 2-byte AudioSpecificConfig, **Safari gives a full ES_Descriptor (starts `03 80 80 80`)**. Feeding Safari's to mp4-muxer double-wraps the esds and Safari then refuses its own file (MediaError code 4, ffprobe: "Audio object type 0"). We therefore build the ASC ourselves (`audioSpecificConfig()`) and ignore browser metadata. Safari also defaults to VBR (file 4× smaller for tones) – hence `bitrateMode: 'constant'`.
+- AAC adds ~44 ms encoder priming at the start (measured: tone at 5.000 s lands at 5.044 s). Irrelevant because cue points are set on the transcoded file, but don't "fix" it by trimming.
+- Testing real Safari: Playwright can't drive it, but a tiny node server + `open -a Safari http://localhost:PORT` + `fetch('/result', {method:'POST'})` works; the module can be imported straight from the Vite dev server (`http://localhost:3000/src/utils/x.ts`, CORS allows localhost origins).
 - A clip with `cue.end === null` plays to the end of the file; `clip.duration` is read at import (`readDuration`) and refined by the cue editor (`decodeAudioData`).
 - Keep playback exclusive: starting a clip tears down the previous Howl (`teardown()` calls `off()` first so no stale events fire).
 
