@@ -20,7 +20,10 @@ export function ClipPanel({ pad, onClose }: Props) {
     <aside className="w-72 shrink-0 flex flex-col bg-vsg-navy-900/95 backdrop-blur-xl border-l border-white/10" style={style}>
       <div className="flex items-center gap-3 p-4 border-b border-white/10">
         <span className="w-4 h-4 rounded-full shrink-0" style={{ background: 'var(--c)', boxShadow: '0 0 10px var(--c)' }} />
-        <h3 className="flex-1 text-lg font-bold truncate">{pad.name}</h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-bold truncate">{pad.name}</h3>
+          {pad.description && <p className="text-xs text-vsg-ice truncate">{pad.description}</p>}
+        </div>
         <button onClick={onClose} aria-label="Schließen" className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70">
           ✕
         </button>

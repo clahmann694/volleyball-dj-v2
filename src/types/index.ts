@@ -36,6 +36,8 @@ export type TeamId = 'herren' | 'damen';
 export interface SoundPad {
   id: string;
   name: string;
+  /** Kleingedruckte Erklaerung unter der Beschriftung, z. B. "z.B. kurzer Aufschlag, Lob" (optional) */
+  description: string;
   /** Tastenfarbe (Hex), siehe PAD_COLORS */
   color: string;
   /** Mannschaften, bei denen dieser Button erscheint (mindestens eine) */

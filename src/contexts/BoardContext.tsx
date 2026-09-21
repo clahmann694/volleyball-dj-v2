@@ -39,7 +39,7 @@ interface BoardContextType {
   addPad: (rowId: string, name: string, color: string, teams: TeamId[]) => void;
   /** Mannschaften eines Buttons setzen (leere Liste wird ignoriert) */
   setPadTeams: (padId: string, teams: TeamId[]) => void;
-  updatePad: (padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color' | 'playback'>>) => void;
+  updatePad: (padId: string, patch: Partial<Pick<SoundPad, 'name' | 'description' | 'color' | 'playback'>>) => void;
   /** left/right: innerhalb der Zeile; up/down: ans Ende der Nachbarzeile (down in letzter Zeile = neue Zeile) */
   movePad: (padId: string, direction: MoveDirection) => void;
   /** Setzt ein Pad an eine genaue Position (Ziehen mit der Maus). rowId NEW_ROW = neue Zeile am Ende. */
@@ -135,7 +135,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     setBoard(b => ({
       ...b,
       rows: b.rows.map(r =>
-        r.id === rowId ? { ...r, pads: [...r.pads, { id: newId(), name: name.trim() || 'Neuer Button', color, teams, playback: 'single' as PlaybackMode, clips: [] }] } : r
+        r.id === rowId ? { ...r, pads: [...r.pads, { id: newId(), name: name.trim() || 'Neuer Button', description: '', color, teams, playback: 'single' as PlaybackMode, clips: [] }] } : r
       ),
     }));
   }, []);
@@ -146,7 +146,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     setBoard(b => mapPads(b, pad => (pad.id === padId ? { ...pad, teams } : pad)));
   }, []);
 
-  const updatePad = useCallback((padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color' | 'playback'>>) => {
+  const updatePad = useCallback((padId: string, patch: Partial<Pick<SoundPad, 'name' | 'description' | 'color' | 'playback'>>) => {
     setBoard(b => mapPads(b, pad => (pad.id === padId ? { ...pad, ...patch } : pad)));
   }, []);
 

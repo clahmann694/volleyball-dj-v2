@@ -14,7 +14,7 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 - Der Bildschirm bleibt im Spielbetrieb an
 
 **Dev-Ansicht** (Einrichtung)
-- Tasten anlegen, beschriften, Farbe wählen, löschen
+- Tasten anlegen, beschriften, Farbe wählen, löschen – optional mit Kleingedrucktem unter dem Namen („z.B. kurzer Aufschlag, Lob"), damit jeder weiß, welche Situation gemeint ist
 - Jede Taste Herren 1, Damen 1 oder beiden zuordnen; Umschalter zeigt, was eine Mannschaft sieht
 - Anordnung mit der Maus: Tasten an ihren Platz ziehen, in eine andere Zeile oder in eine neue
 - Audiodateien per Datei-Dialog oder Drag & Drop hinzufügen (MP3, M4A, WAV, …)

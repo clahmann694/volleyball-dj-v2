@@ -82,6 +82,11 @@ async function main() {
     ok(b.rows[0].pads[0].playback === 'sequence' && b.rows[0].pads[2].playback === 'shuffle', 'Wiedergabemodi gespeichert');
     ok(b.rows[0].pads[0].clips.every(c => c.gain === 1), 'Neue Sounds haben Lautstärke 100 %');
 
+    console.log('\n2b) Beschreibung (Kleingedrucktes)');
+    await card('Ass').locator('input[aria-label="Beschreibung des Buttons"]').fill('z.B. kurzer Aufschlag, Lob');
+    b = await board();
+    ok(b.rows[0].pads[0].description === 'z.B. kurzer Aufschlag, Lob', 'Beschreibung gespeichert');
+
     console.log('\n3) Sortieren + Verschieben');
     await card('Ass').locator('button[title="Nach unten"]').first().click();
     b = await board();
@@ -110,6 +115,7 @@ async function main() {
     console.log('\n5) Auto-Weiterspielen (der Reihe nach) + Zeitmessung');
     await p.click('header button:has-text("DJ")');
     await p.waitForSelector('button.pad3d');
+    ok((await p.locator('button.pad3d:has-text("Ass") .pad3d__desc').innerText()) === 'z.B. kurzer Aufschlag, Lob', 'Beschreibung steht kleingedruckt auf der Taste');
     b = await board();
     const reihe = b.rows[0].pads[0].clips; // Ass: Reihenfolge nach Schritt 3
     const dauer = { kurz: 1.5, mittel: 2.5 };
@@ -186,6 +192,7 @@ async function main() {
     b = await board();
     const mix = b.rows.flatMap(r => r.pads).find(x => x.name === 'Mix');
     ok(b.rows.length === 2 && mix?.playback === 'shuffle' && mix.clips.length === 3 && mix.clips[2].gain === 0.5, 'Export/Import erhält Zeilen, Modi und Lautstärke', `rows=${b.rows.length} mix=${mix?.playback}/${mix?.clips.length}`);
+    ok(b.rows[0].pads[0].description === 'z.B. kurzer Aufschlag, Lob', 'Export/Import erhält die Beschreibung');
 
     console.log('\n10) Bildschirm wachhalten');
     ok(await p.evaluate(() => 'wakeLock' in navigator), 'Wake-Lock-API vorhanden');

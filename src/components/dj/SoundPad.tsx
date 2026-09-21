@@ -42,7 +42,11 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
       >
         <span className="pad3d__cap">
           <span className="pad3d__label">{pad.name}</span>
-          {!hasClips && <span className="pad3d__hint">keine Sounds</span>}
+          {pad.description ? (
+            <span className="pad3d__desc">{pad.description}</span>
+          ) : (
+            !hasClips && <span className="pad3d__hint">keine Sounds</span>
+          )}
         </span>
       </button>
 

@@ -21,7 +21,7 @@ export function padTextColor(hex: string): string {
 }
 
 // Neue Buttons gelten zunaechst fuer beide Mannschaften
-const pad = (id: string, name: string, color: string): SoundPad => ({ id, name, color, teams: [...ALL_TEAM_IDS], playback: 'single', clips: [] });
+const pad = (id: string, name: string, color: string): SoundPad => ({ id, name, description: '', color, teams: [...ALL_TEAM_IDS], playback: 'single', clips: [] });
 const C = Object.fromEntries(PAD_COLORS.map(c => [c.id, c.hex])) as Record<(typeof PAD_COLORS)[number]['id'], string>;
 
 // Startbelegung: die Buttons aus der V1 (ohne Audiodateien), eine Zeile je frueherer Kategorie

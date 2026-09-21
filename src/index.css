@@ -141,6 +141,26 @@ button {
     opacity: 0.75;
   }
 
+  /* Kleingedruckte Erklaerung, z. B. "z.B. kurzer Aufschlag, Lob" */
+  .pad3d__desc {
+    position: relative;
+    margin-top: 1px;
+    font-size: 0.68rem;
+    font-size: clamp(0.62rem, 5.5cqw, 0.78rem);
+    line-height: 1.15;
+    font-weight: 500;
+    color: var(--t);
+    opacity: 0.85;
+    text-align: center;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+
   .pad3d:not(:disabled):hover {
     filter: brightness(1.08);
   }

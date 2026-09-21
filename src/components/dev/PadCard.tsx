@@ -136,6 +136,17 @@ export function PadCard({ pad, rowIndex, onEditClip }: Props) {
         <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400 ml-auto">🗑</button>
       </div>
 
+      <div className="flex items-center gap-2 mb-2">
+        <input
+          value={pad.description}
+          onChange={e => updatePad(pad.id, { description: e.target.value })}
+          maxLength={80}
+          placeholder="Kleingedruckt unter dem Namen, z. B. „z.B. kurzer Aufschlag, Lob“ (optional)"
+          aria-label="Beschreibung des Buttons"
+          className="flex-1 min-w-0 h-8 px-2 rounded-lg bg-transparent hover:bg-white/5 focus:bg-white/10 outline-none text-sm text-vsg-ice placeholder:text-white/25"
+        />
+      </div>
+
       {pad.clips.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
           <span className="text-white/50">Beim Drücken:</span>

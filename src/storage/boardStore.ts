@@ -27,6 +27,7 @@ function normalizePad(pad: Partial<SoundPad>): SoundPad {
   return {
     id: pad.id ?? newId(),
     name: pad.name ?? 'Button',
+    description: typeof pad.description === 'string' ? pad.description : '',
     color: pad.color ?? PAD_COLORS[4].hex,
     teams: teams.length ? teams : [...ALL_TEAM_IDS],
     playback: pad.playback && PLAYBACK_MODES.includes(pad.playback) ? pad.playback : 'single',
