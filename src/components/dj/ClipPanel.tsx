@@ -1,25 +1,24 @@
 import { CSSProperties } from 'react';
-import { PadRef } from '../../contexts/BoardContext';
+import { SoundPad } from '../../types';
 import { useAudio } from '../../contexts/AudioContext';
 import { formatTime } from '../../utils/formatTime';
 
 interface Props {
-  padRef: PadRef;
+  pad: SoundPad;
   onClose: () => void;
 }
 
 /** Seitenleiste: alle Clips eines Buttons einzeln anwaehlbar. */
-export function ClipPanel({ padRef, onClose }: Props) {
-  const { pad, group } = padRef;
+export function ClipPanel({ pad, onClose }: Props) {
   const { playing, play, stopAll } = useAudio();
-  const style = { '--g': group.color } as CSSProperties;
+  const style = { '--c': pad.color } as CSSProperties;
 
   const playRandom = () => play(pad.id, pad.clips[Math.floor(Math.random() * pad.clips.length)]);
 
   return (
     <aside className="w-72 shrink-0 flex flex-col bg-vsg-navy-900/95 backdrop-blur-xl border-l border-white/10" style={style}>
       <div className="flex items-center gap-3 p-4 border-b border-white/10">
-        <span className="text-2xl">{pad.icon}</span>
+        <span className="w-4 h-4 rounded-full shrink-0" style={{ background: 'var(--c)', boxShadow: '0 0 10px var(--c)' }} />
         <h3 className="flex-1 text-lg font-bold truncate">{pad.name}</h3>
         <button onClick={onClose} aria-label="Schließen" className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70">
           ✕

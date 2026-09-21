@@ -18,7 +18,7 @@ const MIN_GAP = 0.1; // Sekunden zwischen Start und Ende
  * Klick = Start, Shift+Klick = Ende, Marker sind ziehbar, Zahlenfelder fuer Feinarbeit.
  */
 export function CuePointEditor({ clipRef, onClose }: Props) {
-  const { clip, pad, group } = clipRef;
+  const { clip, pad } = clipRef;
   const { updateClip } = useBoard();
   const audio = useAudio();
 
@@ -128,7 +128,7 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
     setEnd(duration);
   };
 
-  const style = { '--g': group.color } as CSSProperties;
+  const style = { '--c': pad.color } as CSSProperties;
   const playhead = isPreviewing ? audio.position : null;
 
   return (
@@ -137,7 +137,7 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
         <div className="flex items-center gap-3 p-4 border-b border-white/10">
           <h3 className="text-lg font-bold">Cue-Points setzen</h3>
           <span className="flex-1 text-right text-sm text-white/50 truncate">
-            {pad.icon} {pad.name} · {clip.name}
+            {pad.name} · {clip.name}
           </span>
           <button onClick={onClose} aria-label="Schließen" className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/70">
             ✕
@@ -156,7 +156,7 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
             onPointerCancel={onPointerUp}
             className="relative h-28 rounded-xl bg-black/50 overflow-hidden cursor-crosshair select-none touch-none"
           >
-            <Waveform peaks={peaks} color={group.color} />
+            <Waveform peaks={peaks} color={pad.color} />
             {/* abgedunkelte Bereiche ausserhalb des Clips */}
             <div className="absolute inset-y-0 left-0 bg-black/65 pointer-events-none" style={{ width: pct(start) }} />
             <div className="absolute inset-y-0 right-0 bg-black/65 pointer-events-none" style={{ width: pct(duration - end) }} />

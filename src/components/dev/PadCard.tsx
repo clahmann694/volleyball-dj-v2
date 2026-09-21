@@ -1,22 +1,26 @@
-import { ChangeEvent, DragEvent, useRef, useState } from 'react';
+import { CSSProperties, ChangeEvent, DragEvent, useRef, useState } from 'react';
 import { SoundPad } from '../../types';
 import { useBoard } from '../../contexts/BoardContext';
 import { ClipRow } from './ClipRow';
+import { ColorSwatches } from './ColorSwatches';
 
 interface Props {
   pad: SoundPad;
+  index: number;
+  total: number;
   onEditClip: (clipId: string) => void;
 }
 
 const ACCEPT = 'audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff';
 
-/** Ein Button in der Dev-Ansicht: umbenennen, Sounds hinzufuegen, Clips bearbeiten. */
-export function PadCard({ pad, onEditClip }: Props) {
-  const { updatePad, deletePad, addClipsFromFiles, busy } = useBoard();
+/** Ein Button in der Dev-Ansicht: Farbe, Name, Position, Sounds. */
+export function PadCard({ pad, index, total, onEditClip }: Props) {
+  const { updatePad, movePad, deletePad, addClipsFromFiles, busy } = useBoard();
   const [dragOver, setDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const style = { '--c': pad.color } as CSSProperties;
 
   const importFiles = async (files: FileList | File[]) => {
     setImporting(true);
@@ -44,42 +48,37 @@ export function PadCard({ pad, onEditClip }: Props) {
   };
 
   const remove = () => {
-    const msg = pad.clips.length
-      ? `„${pad.name}“ mit ${pad.clips.length} Sound(s) wirklich löschen?`
-      : `„${pad.name}“ wirklich löschen?`;
+    const msg = pad.clips.length ? `„${pad.name}“ mit ${pad.clips.length} Sound(s) wirklich löschen?` : `„${pad.name}“ wirklich löschen?`;
     if (window.confirm(msg)) void deletePad(pad.id);
   };
 
   return (
     <div
+      style={style}
       onDragOver={e => {
         e.preventDefault();
         setDragOver(true);
       }}
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
-      className={`rounded-xl p-3 bg-vsg-navy-950/40 border transition-colors ${dragOver ? 'border-vsg-cyan bg-vsg-cyan/10' : 'border-transparent'}`}
+      className={`rounded-2xl p-3 bg-vsg-navy-900/70 border-l-4 border transition-colors ${
+        dragOver ? 'border-vsg-cyan bg-vsg-cyan/10' : 'border-white/10'
+      }`}
     >
-      <div className="flex items-center gap-2 pb-2 mb-2 border-b border-white/10">
-        <input
-          value={pad.icon}
-          onChange={e => updatePad(pad.id, { icon: e.target.value })}
-          maxLength={4}
-          aria-label="Emoji"
-          className="w-10 h-9 text-center text-lg rounded-lg bg-white/5 hover:bg-white/10 focus:bg-white/10 outline-none"
-        />
+      <div className="flex flex-wrap items-center gap-2 pb-2 mb-2 border-b border-white/10">
+        <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white/70 bg-white/10 shrink-0">{index + 1}</span>
         <input
           value={pad.name}
           onChange={e => updatePad(pad.id, { name: e.target.value })}
-          aria-label="Name des Buttons"
-          className="flex-1 min-w-0 h-9 px-2 rounded-lg bg-transparent hover:bg-white/5 focus:bg-white/10 outline-none font-semibold"
+          aria-label="Beschriftung des Buttons"
+          className="flex-1 min-w-[140px] h-9 px-2 rounded-lg bg-transparent hover:bg-white/5 focus:bg-white/10 outline-none font-semibold"
         />
-        <span className="text-xs text-white/40 whitespace-nowrap">
-          {pad.clips.length} Sound{pad.clips.length === 1 ? '' : 's'}
-        </span>
-        <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400">
-          🗑
-        </button>
+        <ColorSwatches value={pad.color} onChange={hex => updatePad(pad.id, { color: hex })} />
+        <div className="flex items-center gap-1 ml-auto">
+          <button onClick={() => movePad(pad.id, -1)} disabled={index === 0} title="Nach vorne" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">←</button>
+          <button onClick={() => movePad(pad.id, 1)} disabled={index === total - 1} title="Nach hinten" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">→</button>
+          <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400">🗑</button>
+        </div>
       </div>
 
       <div className="space-y-1.5">
@@ -91,11 +90,7 @@ export function PadCard({ pad, onEditClip }: Props) {
 
       <div className="mt-2 flex items-center gap-3 text-xs">
         <input ref={fileInput} type="file" accept={ACCEPT} multiple hidden onChange={onFileChange} />
-        <button
-          onClick={() => fileInput.current?.click()}
-          disabled={busy || importing}
-          className="px-3 py-1.5 rounded-lg bg-vsg-blue hover:bg-vsg-cyan disabled:opacity-50 font-medium"
-        >
+        <button onClick={() => fileInput.current?.click()} disabled={busy || importing} className="px-3 py-1.5 rounded-lg bg-vsg-blue hover:bg-vsg-cyan disabled:opacity-50 font-medium">
           {importing ? 'Importiere…' : '＋ Dateien hinzufügen'}
         </button>
         <span className="text-white/40 hidden sm:inline">oder MP3s hierher ziehen</span>

@@ -9,11 +9,11 @@ Volleyball DJ V2 – a soundboard web app for DJing volleyball matches, built wi
 The user speaks German; UI strings are German, code/comments/commits are English (comments may be German where they explain domain intent).
 
 ### Key Concept: Soundboard with Cue Points
-The board is a fixed set of colour-coded **groups** (Scoring, Momentum, Timeouts & Breaks, Fun & Interaction, Game Events). Each group holds **pads** (buttons such as "Ace!", "Block!"). A pad holds 1..n **clips**; clicking a pad plays a random clip, clicking again stops it. Every clip has **cue points** (start/end in seconds) so any full-length song can be turned into a 25-second timeout clip without editing the file.
+The board is a **flat grid of pads** (buttons such as "Ass!", "Block!", "krasser Angriff") in reading order – there are no categories (removed 2026-09-21 on the user's request; v1 boards with groups are migrated in `boardStore.migrateBoard`). Each pad has one of six **colours** (`PAD_COLORS`) and 1..n **clips**; clicking a pad plays a random clip, clicking again stops it. Every clip has **cue points** (start/end in seconds) so any full-length song can be turned into a 25-second timeout clip without editing the file.
 
 Two views:
-- **DJ view** – the dashboard used during games: pads, side panel for multi-clip pads, transport bar (now playing, fade out, STOP, volume). Space = stop all.
-- **Dev view** – setup: rename pads, add/remove pads, import audio files (file picker or drag & drop), set cue points in a waveform editor, export/import the whole setup as a `.vbdj` bundle.
+- **DJ view** – the dashboard used during games: 3D arcade-style pads (CSS only: `.pad3d` base + `.pad3d__cap`), side panel for multi-clip pads, transport bar (now playing, fade out, STOP, volume). Space = stop all.
+- **Dev view** – setup: rename/recolour/reorder pads (← →), add/remove pads, import audio files (file picker or drag & drop), set cue points in a waveform editor, export/import the whole setup as a `.vbdj` bundle.
 
 ## Development Commands
 
@@ -34,7 +34,7 @@ npm run type-check   # tsc --noEmit (strict, noUnusedLocals)
 
 ### Data flow
 ```
-BoardContext  (groups → pads → clips, persisted to localStorage)
+BoardContext  (pads → clips, persisted to localStorage; v1 "groups" migrated on load)
      │  fileId
      ▼
 audioStore    (IndexedDB "vbdj-v2" / store "files": {id, blob, name, type})
@@ -46,18 +46,18 @@ AudioContext  (one Howl at a time; exclusive playback; sprite = [start, end-star
 ### Source layout
 ```
 src/
-├── types/index.ts            # CuePoint, SoundClip, SoundPad, SoundGroup, BoardConfig
-├── config/defaultBoard.ts    # the 23 pads from V1 (no audio – imported by the user)
+├── types/index.ts            # CuePoint, SoundClip, SoundPad, BoardConfig (version 2)
+├── config/defaultBoard.ts    # PAD_COLORS, padTextColor(), the 23 default pads (no audio)
 ├── storage/
 │   ├── audioStore.ts         # IndexedDB wrapper + persistence/quota helpers
-│   └── boardStore.ts         # localStorage load/save
+│   └── boardStore.ts         # localStorage load/save + migrateBoard (v1 groups → v2 flat)
 ├── contexts/
 │   ├── AudioContext.tsx      # play(padId, clip, cueOverride?), stopAll, fadeOut, volume
-│   └── BoardContext.tsx      # CRUD for pads/clips, addClipsFromFiles, export/import/reset
+│   └── BoardContext.tsx      # CRUD/reorder for pads, clips, addClipsFromFiles, export/import/reset
 ├── components/
 │   ├── Header.tsx            # title + DJ/Dev toggle
-│   ├── dj/                   # DjView, SoundBoard, SoundGroupSection, SoundPad, ClipPanel, TransportBar
-│   └── dev/                  # DeveloperView, GroupEditor, PadCard, ClipRow, CuePointEditor, Waveform, BundleControls
+│   ├── dj/                   # DjView, SoundBoard (grid), SoundPad (3D button), ClipPanel, TransportBar
+│   └── dev/                  # DeveloperView, PadCard, ColorSwatches, ClipRow, CuePointEditor, Waveform, BundleControls
 ├── utils/                    # audioFormat (mime/ext, duration), bundle (zip), waveform (peaks), formatTime, id
 └── App.tsx                   # providers, view state, keyboard shortcuts (Space, Escape)
 ```
@@ -77,10 +77,11 @@ src/
 
 ### UI / Corporate Design
 - Colours follow the club CI of **VSG Kleinsteinbach** (defined as `vsg.*` in `tailwind.config.js`, sampled from the club logo and the club's "Getränkelager" app): cyan `#009fe3` (logo, active states), blue `#0089c8` (primary buttons), navy `#0d283a → #07101a` (background, like the club splash screen), ice `#9bc3de` (secondary text), red `#e95055`, green `#16a94f`. Dark theme only – decided 2026-09-21 (less glare in the gym).
-- The five **group colours stay functional** (pink/orange/green/purple/blue) so the DJ can hit the right row instantly; only chrome (header, buttons, panels, STOP) uses CI colours. Don't recolour groups to cyan.
+- Pads use the six **arcade colours** from the user's reference renders (`PAD_COLORS`: red `#e00000`, orange `#fb6203`, yellow `#fedc05`, green `#10cc1c`, blue `#0a45f8`, purple `#8f0af0`); `padTextColor()` picks dark text on yellow. Only chrome (header, buttons, panels, STOP) uses CI colours. Don't recolour pads to cyan.
 - Logo sources live in `assets/brand/` (`vsg-logo-cyan.png` = filled shield, `vsg-logo-outline.png`; not deployed). Only `public/brand/vsg-logo-96.png` (header) and the icons ship with the app. App icons are PNGs generated from the filled logo on white (`sips`), matching the club app's icon. Reference them via `import.meta.env.BASE_URL` (GitHub Pages sub-path).
-- Group colour is passed as CSS variable `--g`; the `.group-card`, `.pad`, `.badge-num` component classes in `index.css` use `color-mix()` with it. Tailwind utilities for everything else.
-- The DJ view must fit without scrolling on iPad landscape (1024×768): keep the compact `@media (max-height: 820px)` rules working when changing pad/group sizes.
+- Pad colour is passed as CSS variable `--c` (text colour `--t`) on `.pad-wrap`; `.pad3d*` and `.badge-num` in `index.css` derive every shade with `color-mix()`. Defaults for `--c/--t` live on `.pad-wrap`, never on `.pad3d` (they would override the inline values). Tailwind utilities for everything else.
+- Pad labels must survive long German words ("Trommelwirbel", "krasser Angriff"): 2-line clamp, `hyphens: auto` (index.html has `lang="de"`), font size in `cqw` via `container-type: inline-size` on `.pad-wrap`.
+- The DJ grid is `auto-fill, minmax(150px, 1fr)` with `aspect-ratio 3/2`: 6 columns × 4 rows on iPad landscape (all 23 default pads visible without scrolling), 8 columns on a 1400px Mac window. Don't make pads smaller – they are tapped in a hurry.
 - Touch targets ≥ 44px in the DJ view; the STOP button must always be visible (no spacebar on iPad).
 
 ### Testing changes

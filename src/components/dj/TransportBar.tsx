@@ -15,14 +15,14 @@ export function TransportBar() {
     return () => clearTimeout(t);
   }, [error, clearError]);
 
-  const padRef = playing ? padIndex.get(playing.padId) : undefined;
+  const pad = playing ? padIndex.get(playing.padId) : undefined;
   const start = cue?.start ?? 0;
   const end = cue?.end ?? fileDuration ?? null;
   const total = end != null && end > start ? end - start : null;
   const elapsed = Math.max(0, position - start);
   const progress = total ? Math.min(100, (elapsed / total) * 100) : 0;
   const remaining = total != null ? Math.max(0, total - elapsed) : null;
-  const style = { '--g': padRef?.group.color ?? '#ffffff' } as CSSProperties;
+  const style = { '--c': pad?.color ?? '#ffffff' } as CSSProperties;
 
   return (
     <footer className="relative shrink-0 border-t border-white/10 bg-vsg-navy-900/90 backdrop-blur-xl px-4 py-2 flex items-center gap-4" style={style}>
@@ -38,15 +38,15 @@ export function TransportBar() {
         {playing ? (
           <>
             <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: 'var(--g)', boxShadow: '0 0 10px var(--g)' }} />
-              <span className="font-semibold truncate">{padRef?.pad.name ?? '…'}</span>
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: 'var(--c)', boxShadow: '0 0 10px var(--c)' }} />
+              <span className="font-semibold truncate">{pad?.name ?? '…'}</span>
               <span className="text-white/40">·</span>
               <span className="text-white/70 truncate">{clipName}</span>
               {!isPlaying && <span className="text-xs text-white/40">lädt…</span>}
               {isFading && <span className="text-xs text-vsg-ice animate-pulse">Fade…</span>}
             </div>
             <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full transition-[width] duration-100" style={{ width: `${progress}%`, background: 'var(--g)' }} />
+              <div className="h-full rounded-full transition-[width] duration-100" style={{ width: `${progress}%`, background: 'var(--c)' }} />
             </div>
             <div className="mt-1 flex justify-between text-[11px] font-mono text-white/50">
               <span>{formatTime(elapsed)}</span>

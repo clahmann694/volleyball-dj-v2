@@ -12,7 +12,7 @@ export function BundleControls() {
   const [info, setInfo] = useState<{ usage: number; quota: number; persisted: boolean | null } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const clipCount = board.groups.reduce((n, g) => n + g.pads.reduce((m, p) => m + p.clips.length, 0), 0);
+  const clipCount = board.pads.reduce((n, p) => n + p.clips.length, 0);
 
   useEffect(() => {
     let alive = true;

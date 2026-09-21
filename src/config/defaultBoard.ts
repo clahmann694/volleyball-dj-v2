@@ -1,73 +1,53 @@
 import { BoardConfig, SoundPad } from '../types';
 
-// Startbelegung: die 23 Buttons aus der V1 (ohne Audiodateien - die werden importiert)
-const pad = (id: string, name: string, icon: string): SoundPad => ({ id, name, icon, clips: [] });
+/** Die sechs Tastenfarben (aus den Referenzbildern gesampelt). */
+export const PAD_COLORS = [
+  { id: 'red', hex: '#e00000', label: 'Rot' },
+  { id: 'orange', hex: '#fb6203', label: 'Orange' },
+  { id: 'yellow', hex: '#fedc05', label: 'Gelb' },
+  { id: 'green', hex: '#10cc1c', label: 'Grün' },
+  { id: 'blue', hex: '#0a45f8', label: 'Blau' },
+  { id: 'purple', hex: '#8f0af0', label: 'Lila' },
+] as const;
 
+/** Beschriftungsfarbe: dunkel auf hellen Tasten (Gelb), sonst weiss. */
+export function padTextColor(hex: string): string {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return '#ffffff';
+  const [r, g, b] = [m[1], m[2], m[3]].map(h => parseInt(h, 16) / 255);
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.6 ? '#0b1a27' : '#ffffff';
+}
+
+const pad = (id: string, name: string, color: string): SoundPad => ({ id, name, color, clips: [] });
+const C = Object.fromEntries(PAD_COLORS.map(c => [c.id, c.hex])) as Record<(typeof PAD_COLORS)[number]['id'], string>;
+
+// Startbelegung: die Buttons aus der V1, ohne Audiodateien (werden importiert)
 export const DEFAULT_BOARD: BoardConfig = {
-  version: 1,
-  groups: [
-    {
-      id: 'scoring',
-      name: 'Scoring',
-      icon: '🏐',
-      color: '#ff2d55',
-      pads: [
-        pad('ace', 'Ace!', '🎯'),
-        pad('block', 'Block!', '🧱'),
-        pad('kill', 'Kill!', '💥'),
-        pad('point', 'Point!', '✨'),
-        pad('set-point', 'Set Point', '🔥'),
-      ],
-    },
-    {
-      id: 'momentum',
-      name: 'Momentum',
-      icon: '🔥',
-      color: '#ff9500',
-      pads: [
-        pad('lets-go', "Let's Go!", '👏'),
-        pad('air-horn', 'Air Horn', '📯'),
-        pad('drum-roll', 'Drum Roll', '🥁'),
-        pad('crowd-cheer', 'Crowd Cheer', '👥'),
-        pad('siren', 'Siren', '🚨'),
-      ],
-    },
-    {
-      id: 'timeouts',
-      name: 'Timeouts & Breaks',
-      icon: '⏱️',
-      color: '#30d158',
-      pads: [
-        pad('timeout-beat', 'Timeout Beat', '🎵'),
-        pad('hype-track', 'Hype Track', '🎧'),
-        pad('walk-on', 'Walk-On', '🚶'),
-        pad('halftime', 'Halftime', '🌟'),
-      ],
-    },
-    {
-      id: 'fun',
-      name: 'Fun & Interaction',
-      icon: '🎉',
-      color: '#bf5af2',
-      pads: [
-        pad('buzzer', 'Buzzer', '🔔'),
-        pad('fail', 'Wah Wah', '😅'),
-        pad('applause', 'Applause', '👏'),
-        pad('defense', 'Defense!', '🛡️'),
-        pad('boo', 'Boo!', '👻'),
-      ],
-    },
-    {
-      id: 'events',
-      name: 'Game Events',
-      icon: '📋',
-      color: '#0a84ff',
-      pads: [
-        pad('whistle', 'Whistle', '📣'),
-        pad('substitution', 'Sub', '🔄'),
-        pad('challenge', 'Challenge', '🏴'),
-        pad('game-start', 'Game Start', '🎬'),
-      ],
-    },
+  version: 2,
+  pads: [
+    pad('ace', 'Ass!', C.red),
+    pad('block', 'Block!', C.red),
+    pad('kill', 'Angriff!', C.red),
+    pad('point', 'Punkt!', C.red),
+    pad('set-point', 'Satzball', C.red),
+    pad('lets-go', "Los geht's!", C.orange),
+    pad('air-horn', 'Tröte', C.orange),
+    pad('drum-roll', 'Trommelwirbel', C.orange),
+    pad('crowd-cheer', 'Jubel', C.orange),
+    pad('siren', 'Sirene', C.orange),
+    pad('timeout-beat', 'Timeout-Beat', C.green),
+    pad('hype-track', 'Hype-Track', C.green),
+    pad('walk-on', 'Einlauf', C.green),
+    pad('halftime', 'Halbzeit', C.green),
+    pad('buzzer', 'Buzzer', C.purple),
+    pad('fail', 'Wah Wah', C.purple),
+    pad('applause', 'Applaus', C.purple),
+    pad('defense', 'Abwehr!', C.purple),
+    pad('boo', 'Buh!', C.purple),
+    pad('whistle', 'Pfiff', C.blue),
+    pad('substitution', 'Wechsel', C.blue),
+    pad('challenge', 'Challenge', C.blue),
+    pad('game-start', 'Spielstart', C.blue),
   ],
 };

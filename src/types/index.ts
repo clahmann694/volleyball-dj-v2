@@ -23,22 +23,15 @@ export interface SoundClip {
 export interface SoundPad {
   id: string;
   name: string;
-  icon: string;
+  /** Tastenfarbe (Hex), siehe PAD_COLORS */
+  color: string;
   clips: SoundClip[];
 }
 
-/** Eine farbige Kategorie (Scoring, Momentum, ...). */
-export interface SoundGroup {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  pads: SoundPad[];
-}
-
+/** Das Board ist ein flaches Raster von Buttons in Lesereihenfolge. */
 export interface BoardConfig {
-  version: 1;
-  groups: SoundGroup[];
+  version: 2;
+  pads: SoundPad[];
 }
 
 export type ViewMode = 'dj' | 'dev';

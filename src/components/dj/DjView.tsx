@@ -12,7 +12,7 @@ interface DjViewProps {
 /** Produktiv-Ansicht: Dashboard mit Pads, Seitenleiste fuer Mehrfach-Pads, Transportleiste. */
 export function DjView({ panelPadId, onOpenPanel, onClosePanel }: DjViewProps) {
   const { padIndex } = useBoard();
-  const panel = panelPadId ? padIndex.get(panelPadId) : undefined;
+  const pad = panelPadId ? padIndex.get(panelPadId) : undefined;
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -20,7 +20,7 @@ export function DjView({ panelPadId, onOpenPanel, onClosePanel }: DjViewProps) {
         <main className="flex-1 min-h-0 overflow-y-auto p-2">
           <SoundBoard onOpenPanel={onOpenPanel} />
         </main>
-        {panel && <ClipPanel padRef={panel} onClose={onClosePanel} />}
+        {pad && <ClipPanel pad={pad} onClose={onClosePanel} />}
       </div>
       <TransportBar />
     </div>

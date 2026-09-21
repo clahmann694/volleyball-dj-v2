@@ -5,12 +5,12 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 ## Was die App kann
 
 **DJ-Ansicht** (im Spiel)
-- Farbige Button-Gruppen: Scoring, Momentum, Timeouts & Breaks, Fun & Interaction, Game Events
-- Tippen spielt den Sound, nochmal tippen stoppt. Buttons mit mehreren Sounds wählen zufällig – oder du wählst gezielt in der Seitenleiste.
+- Ein Raster aus großen 3D-Tasten in sechs Farben (Rot, Orange, Gelb, Grün, Blau, Lila), frei beschriftbar – „Block", „Ass", „krasser Angriff"
+- Tippen spielt den Sound, nochmal tippen stoppt. Tasten mit mehreren Sounds wählen zufällig – oder du wählst gezielt in der Seitenleiste.
 - Transportleiste: was läuft, Restzeit, **Fade out**, großer **STOP**-Button (am Mac auch Leertaste), Lautstärke
 
 **Dev-Ansicht** (Einrichtung)
-- Buttons anlegen, umbenennen, Emoji ändern, löschen
+- Tasten anlegen, beschriften, Farbe wählen, per ← → sortieren, löschen
 - Audiodateien per Datei-Dialog oder Drag & Drop hinzufügen (MP3, M4A, WAV, …)
 - **Cue-Points** setzen: Wellenform, Klick = Start, Shift-Klick = Ende, Marker ziehen, Vorschau
 - Komplette Einrichtung als `.vbdj`-Bundle exportieren/importieren (Buttons + Cue-Points + Audiodateien)
@@ -43,9 +43,9 @@ Details zur Architektur in [CLAUDE.md](CLAUDE.md).
 
 ## Roadmap
 
-- [x] Soundboard mit Gruppen, Buttons, Mehrfach-Sounds
+- [x] Soundboard mit frei sortierbaren 3D-Tasten, Mehrfach-Sounds
 - [x] Cue-Point-Editor mit Wellenform
 - [x] Lokaler Import, Export/Import als Bundle, PWA
 - [ ] Native Mac-App (Tauri) mit direktem Ordnerzugriff
-- [ ] Gruppen bearbeiten, Sounds sortieren, Tastenkürzel pro Button
+- [ ] Sounds innerhalb einer Taste sortieren, Tastenkürzel pro Taste
 - [ ] Timer (automatischer Stopp nach X Sekunden)
