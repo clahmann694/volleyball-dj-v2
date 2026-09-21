@@ -47,6 +47,8 @@ interface BoardContextType {
   deletePad: (padId: string) => Promise<void>;
   addClipsFromFiles: (padId: string, files: Iterable<File>) => Promise<number>;
   updateClip: (clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration' | 'gain'>>) => void;
+  /** Audiodatei eines Sounds austauschen - Name, Cue-Points und Lautstaerke bleiben */
+  replaceClipFile: (clipId: string, file: File) => Promise<void>;
   /** Reihenfolge innerhalb des Buttons aendern */
   moveClip: (clipId: string, delta: number) => void;
   /** Sound in einen anderen Button verschieben (ans Ende) */
@@ -213,37 +215,41 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   );
 
   // ----- Clips -----
+  /**
+   * Bereitet eine Datei fuer den Speicher vor: Videos -> Tonspur unveraendert
+   * uebernehmen (Reels), WAV/FLAC -> AAC, alles andere unveraendert.
+   * Schlaegt die Umwandlung fehl, wird die Originaldatei gespeichert.
+   */
+  const prepareFile = useCallback(async (file: File) => {
+    let blob: Blob = file;
+    let fileName = file.name;
+    let mimeType = file.type || 'audio/mpeg';
+    let duration = await readDuration(file);
+    if (shouldCompress(file, duration)) {
+      try {
+        const result = (await remuxAudioTrack(file)) ?? (await transcodeToAac(file));
+        if (result) {
+          blob = result.blob;
+          fileName = file.name.replace(/\.[^./]+$/, '') + '.m4a';
+          mimeType = 'audio/mp4';
+          duration = result.duration;
+        }
+      } catch (e) {
+        console.warn('Tonspur-Extraktion fehlgeschlagen, speichere Original', e);
+      }
+    }
+    const fileId = newId();
+    await putFile({ id: fileId, blob, name: fileName, type: mimeType });
+    return { fileId, blob, fileName, mimeType, duration };
+  }, []);
+
   const addClipsFromFiles = useCallback(async (padId: string, files: Iterable<File>) => {
     setBusy(true);
     try {
       const clips: SoundClip[] = [];
       for (const file of files) {
         if (!isAudioFile(file)) continue;
-        let blob: Blob = file;
-        let fileName = file.name;
-        let mimeType = file.type || 'audio/mpeg';
-        let duration = await readDuration(file);
-
-        // Videos und unkomprimierte Dateien: nur die Tonspur behalten (AAC/M4A).
-        // Schlaegt das fehl, wird die Originaldatei unveraendert gespeichert.
-        if (shouldCompress(file, duration)) {
-          try {
-            // Erst versuchen, die vorhandene AAC-Tonspur unveraendert zu uebernehmen
-            // (Reels) - nur wenn das nicht geht, wird neu kodiert (WAV/FLAC, exotische Videos)
-            const result = (await remuxAudioTrack(file)) ?? (await transcodeToAac(file));
-            if (result) {
-              blob = result.blob;
-              fileName = file.name.replace(/\.[^./]+$/, '') + '.m4a';
-              mimeType = 'audio/mp4';
-              duration = result.duration;
-            }
-          } catch (e) {
-            console.warn('Tonspur-Extraktion fehlgeschlagen, speichere Original', e);
-          }
-        }
-
-        const fileId = newId();
-        await putFile({ id: fileId, blob, name: fileName, type: mimeType });
+        const { fileId, blob, fileName, mimeType, duration } = await prepareFile(file);
         clips.push({
           id: newId(),
           name: cleanClipName(file.name),
@@ -264,7 +270,32 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [prepareFile]);
+
+  const replaceClipFile = useCallback(
+    async (clipId: string, file: File) => {
+      const ref = clipIndex.get(clipId);
+      if (!ref || !isAudioFile(file)) throw new Error('Keine Audio- oder Videodatei.');
+      setBusy(true);
+      try {
+        const { fileId, blob, fileName, mimeType, duration } = await prepareFile(file);
+        const old = ref.clip;
+        // Cue-Points bleiben; nur ein Ende hinter dem neuen Dateiende wird aufgehoben
+        const end = old.cue.end != null && duration != null && old.cue.end > duration ? null : old.cue.end;
+        setBoard(b =>
+          mapPads(b, pad =>
+            pad.clips.some(c => c.id === clipId)
+              ? { ...pad, clips: pad.clips.map(c => (c.id === clipId ? { ...c, fileId, fileName, mimeType, size: blob.size, duration: duration ?? c.duration, cue: { ...c.cue, end } } : c)) }
+              : pad
+          )
+        );
+        await deleteFile(old.fileId).catch(() => undefined);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [clipIndex, prepareFile]
+  );
 
   const updateClip = useCallback((clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration' | 'gain'>>) => {
     setBoard(b =>
@@ -341,8 +372,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<BoardContextType>(
-    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, moveClip, moveClipToPad, deleteClip, exportBoard, importBoard, resetBoard }),
-    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, moveClip, moveClipToPad, deleteClip, exportBoard, importBoard, resetBoard]
+    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, replaceClipFile, moveClip, moveClipToPad, deleteClip, exportBoard, importBoard, resetBoard }),
+    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, replaceClipFile, moveClip, moveClipToPad, deleteClip, exportBoard, importBoard, resetBoard]
   );
 
   return <BoardCtx.Provider value={value}>{children}</BoardCtx.Provider>;

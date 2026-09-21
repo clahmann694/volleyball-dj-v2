@@ -22,6 +22,7 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 - **Cue-Points** setzen: Wellenform, Klick = Start, Shift-Klick = Ende, Marker ziehen, Vorschau
 - **Lautstärke je Sound** mit Pegelmessung und „Angleichen" – damit nicht jeder Song anders laut ist
 - Sounds innerhalb einer Taste sortieren oder in eine andere Taste verschieben
+- Audiodatei eines Sounds austauschen („⟲ Datei") – Name, Cue-Points und Lautstärke bleiben
 - Komplette Einrichtung als `.vbdj`-Bundle exportieren/importieren (Buttons + Cue-Points + Audiodateien)
 
 ## Wo liegen die Sounds?

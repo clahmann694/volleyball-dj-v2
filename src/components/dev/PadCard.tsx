@@ -162,7 +162,7 @@ export function PadCard({ pad, rowIndex, onEditClip }: Props) {
       </div>
 
       <div className="mt-2 flex items-center gap-3 text-xs">
-        <input ref={fileInput} type="file" accept={ACCEPT} multiple hidden onChange={onFileChange} />
+        <input ref={fileInput} type="file" accept={ACCEPT} multiple hidden onChange={onFileChange} data-role="add-clips" />
         <button onClick={() => fileInput.current?.click()} disabled={busy || importing} className="px-3 py-1.5 rounded-lg bg-vsg-blue hover:bg-vsg-cyan disabled:opacity-50 font-medium">
           {importing ? 'Importiere… (Ton wird extrahiert)' : '＋ Dateien hinzufügen'}
         </button>

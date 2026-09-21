@@ -1,3 +1,4 @@
+import { ChangeEvent, useRef, useState } from 'react';
 import { allPads, SoundClip } from '../../types';
 import { useBoard } from '../../contexts/BoardContext';
 import { useAudio } from '../../contexts/AudioContext';
@@ -13,7 +14,25 @@ interface Props {
 }
 
 export function ClipRow({ clip, padId, index, total, onEdit }: Props) {
-  const { board, updateClip, moveClip, moveClipToPad, deleteClip } = useBoard();
+  const { board, updateClip, replaceClipFile, moveClip, moveClipToPad, deleteClip } = useBoard();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [replacing, setReplacing] = useState<'busy' | 'done' | 'error' | null>(null);
+
+  const onReplace = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setReplacing('busy');
+    try {
+      await replaceClipFile(clip.id, file);
+      setReplacing('done');
+    } catch (err) {
+      console.error(err);
+      setReplacing('error');
+    } finally {
+      setTimeout(() => setReplacing(null), 3000);
+    }
+  };
   const otherPads = allPads(board).filter(p => p.id !== padId);
   const { playing, play, stopAll } = useAudio();
   const isPlaying = playing?.clipId === clip.id;
@@ -61,6 +80,15 @@ export function ClipRow({ clip, padId, index, total, onEdit }: Props) {
       </button>
       <button onClick={onEdit} className="h-8 px-2.5 rounded-md bg-vsg-blue hover:bg-vsg-cyan text-xs font-medium whitespace-nowrap" title="Start/Ende und Lautstärke einstellen">
         ✂ Cue
+      </button>
+      <input ref={fileInput} type="file" accept="audio/*,video/mp4,video/quicktime,.mp3,.m4a,.wav,.mp4,.mov" hidden onChange={onReplace} data-role="replace-file" />
+      <button
+        onClick={() => fileInput.current?.click()}
+        disabled={replacing === 'busy'}
+        title="Audiodatei austauschen – Name, Cue-Points und Lautstärke bleiben erhalten (z. B. um ein Reel in bester Qualität neu zu übernehmen)"
+        className={`h-8 px-2 rounded-md text-xs whitespace-nowrap ${replacing === 'done' ? 'bg-vsg-green/30 text-vsg-green' : replacing === 'error' ? 'bg-red-500/30 text-red-300' : 'bg-white/10 hover:bg-white/20 text-white/80'}`}
+      >
+        {replacing === 'busy' ? '…' : replacing === 'done' ? '✓ ersetzt' : replacing === 'error' ? 'Fehler' : '⟲ Datei'}
       </button>
       <button onClick={() => moveClip(clip.id, -1)} disabled={index === 0} title="Nach oben" className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-25 text-xs">↑</button>
       <button onClick={() => moveClip(clip.id, 1)} disabled={index === total - 1} title="Nach unten" className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-25 text-xs">↓</button>

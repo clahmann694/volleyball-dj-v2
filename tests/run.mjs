@@ -82,7 +82,7 @@ async function main() {
 
     console.log('\n2) Import + Wiedergabemodus');
     await goDev();
-    const inputs = p.locator('input[type=file][accept^="audio"]');
+    const inputs = p.locator('input[data-role="add-clips"]');
     await inputs.nth(0).setInputFiles([fx.kurz, fx.mittel]);
     await p.waitForSelector('text=2 Dateien hinzugefügt');
     await inputs.nth(1).setInputFiles([fx.lang]);
@@ -126,6 +126,18 @@ async function main() {
     b = await board();
     ok(b.rows[0].pads[2].clips[2].gain === 0.5, 'Lautstärke 50 % gespeichert', `gain=${b.rows[0].pads[2].clips[2].gain}`);
     ok((await card('Mix').locator('text=/50 %/').count()) === 1, 'Lautstärke in der Liste sichtbar');
+
+    console.log('\n4b) Datei ersetzen – Einstellungen bleiben');
+    {
+      const before = (await board()).rows[0].pads[2].clips[2];
+      const row = card('Mix').locator('div.rounded-lg').filter({ has: p.locator('input[value="leise"]') }).first();
+      await row.locator('input[data-role="replace-file"]').setInputFiles(fx.mittel);
+      await row.locator('button:has-text("✓ ersetzt")').waitFor({ timeout: 15000 });
+      const after = (await board()).rows[0].pads[2].clips[2];
+      const oldBlobGone = await p.evaluate(id => new Promise(res => { const r = indexedDB.open('vbdj-v2'); r.onsuccess = () => { const g = r.result.transaction('files').objectStore('files').get(id); g.onsuccess = () => res(!g.result); }; }), before.fileId);
+      ok(after.fileId !== before.fileId && after.name === 'leise' && after.gain === 0.5 && after.cue.start === before.cue.start, 'Neue Datei, Name/Lautstärke/Cue unverändert', `gain=${after.gain} dauer=${after.duration?.toFixed(1)}`);
+      ok(oldBlobGone, 'Alte Audiodatei gelöscht');
+    }
 
     console.log('\n5) Auto-Weiterspielen (der Reihe nach) + Zeitmessung');
     await p.click('header button:has-text("DJ")');
