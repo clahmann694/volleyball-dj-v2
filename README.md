@@ -1,0 +1,51 @@
+# Volleyball DJ V2
+
+Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Nachfolger von [volleyball-dj-soundboard](https://github.com/clahmann694/volleyball-dj-soundboard), neu gebaut mit React 19, TypeScript und Vite.
+
+## Was die App kann
+
+**DJ-Ansicht** (im Spiel)
+- Farbige Button-Gruppen: Scoring, Momentum, Timeouts & Breaks, Fun & Interaction, Game Events
+- Tippen spielt den Sound, nochmal tippen stoppt. Buttons mit mehreren Sounds wählen zufällig – oder du wählst gezielt in der Seitenleiste.
+- Transportleiste: was läuft, Restzeit, **Fade out**, großer **STOP**-Button (am Mac auch Leertaste), Lautstärke
+
+**Dev-Ansicht** (Einrichtung)
+- Buttons anlegen, umbenennen, Emoji ändern, löschen
+- Audiodateien per Datei-Dialog oder Drag & Drop hinzufügen (MP3, M4A, WAV, …)
+- **Cue-Points** setzen: Wellenform, Klick = Start, Shift-Klick = Ende, Marker ziehen, Vorschau
+- Komplette Einrichtung als `.vbdj`-Bundle exportieren/importieren (Buttons + Cue-Points + Audiodateien)
+
+## Wo liegen die Sounds?
+
+Im Browser des Geräts (IndexedDB) – **nicht** im Repo und **nicht** in der Cloud. Deshalb:
+- funktioniert alles **offline in der Halle**,
+- landen keine urheberrechtlich geschützten Dateien auf GitHub,
+- musst du die Einrichtung pro Gerät einmal importieren (Bundle vom Mac aufs iPad).
+
+**iPad:** Die App über „Teilen → Zum Home-Bildschirm" installieren. Sonst darf Safari die gespeicherten Dateien nach 7 Tagen ohne Nutzung löschen.
+
+## Entwicklung
+
+```bash
+npm install
+npm run dev          # http://localhost:3000
+npm run type-check
+npm run build        # Produktions-Build nach dist/
+```
+
+Der Dev-Server läuft nur, solange das Terminal offen ist. Für den Einsatz auf dem iPad muss die App gehostet werden (z. B. GitHub Pages aus `dist/`) – die Sounds bleiben trotzdem lokal auf dem Gerät.
+
+## Technik
+
+React 19 · TypeScript · Vite 7 · Tailwind CSS · Howler.js (Cue-Points als Sprites) · IndexedDB · JSZip · vite-plugin-pwa
+
+Details zur Architektur in [CLAUDE.md](CLAUDE.md).
+
+## Roadmap
+
+- [x] Soundboard mit Gruppen, Buttons, Mehrfach-Sounds
+- [x] Cue-Point-Editor mit Wellenform
+- [x] Lokaler Import, Export/Import als Bundle, PWA
+- [ ] Native Mac-App (Tauri) mit direktem Ordnerzugriff
+- [ ] Gruppen bearbeiten, Sounds sortieren, Tastenkürzel pro Button
+- [ ] Timer (automatischer Stopp nach X Sekunden)
