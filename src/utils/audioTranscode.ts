@@ -12,6 +12,8 @@
  * Originaldatei wird unveraendert gespeichert.
  */
 
+import { extractAacTrack } from './mp4Demux';
+
 const AAC_CODEC = 'mp4a.40.2'; // AAC-LC
 const BITRATE = 128_000;
 const FRAMES_PER_CHUNK = 48_000; // ~1 s pro AudioData-Objekt
@@ -83,6 +85,43 @@ async function resample(buffer: AudioBuffer, targetRate: number): Promise<AudioB
   src.connect(off.destination);
   src.start(0);
   return off.startRendering();
+}
+
+/**
+ * Kopiert die AAC-Tonspur eines Videos unveraendert in eine M4A-Datei.
+ * Kein Neukodieren, also kein Qualitaetsverlust. null = geht nicht, dann neu kodieren.
+ */
+export async function remuxAudioTrack(input: Blob): Promise<TranscodeResult | null> {
+  const track = await extractAacTrack(input);
+  if (!track) return null;
+  try {
+    const { ArrayBufferTarget, Muxer } = await import('mp4-muxer');
+    const muxer = new Muxer({
+      target: new ArrayBufferTarget(),
+      audio: { codec: 'aac', sampleRate: track.sampleRate, numberOfChannels: track.channels },
+      fastStart: 'in-memory',
+    });
+    const decoderConfig = {
+      codec: AAC_CODEC,
+      sampleRate: track.sampleRate,
+      numberOfChannels: track.channels,
+      description: track.description,
+    };
+    for (const sample of track.samples) {
+      // AAC-Pakete sind samtlich Keyframes
+      muxer.addAudioChunkRaw(sample.data, 'key', sample.timestamp, sample.duration, { decoderConfig });
+    }
+    muxer.finalize();
+    return {
+      blob: new Blob([muxer.target.buffer], { type: 'audio/mp4' }),
+      duration: track.duration,
+      sampleRate: track.sampleRate,
+      channels: track.channels,
+    };
+  } catch (e) {
+    console.warn('Tonspur konnte nicht umgepackt werden, kodiere neu', e);
+    return null;
+  }
 }
 
 export async function transcodeToAac(input: Blob): Promise<TranscodeResult | null> {

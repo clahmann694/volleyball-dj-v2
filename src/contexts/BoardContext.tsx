@@ -5,7 +5,7 @@ import { deleteFile, putFile, requestPersistence } from '../storage/audioStore';
 import { DEFAULT_BOARD } from '../config/defaultBoard';
 import { newId } from '../utils/id';
 import { cleanClipName, isAudioFile, readDuration } from '../utils/audioFormat';
-import { shouldCompress, transcodeToAac } from '../utils/audioTranscode';
+import { remuxAudioTrack, shouldCompress, transcodeToAac } from '../utils/audioTranscode';
 import { createBundle, deleteOrphanFiles, readBundle } from '../utils/bundle';
 
 /**
@@ -228,7 +228,9 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
         // Schlaegt das fehl, wird die Originaldatei unveraendert gespeichert.
         if (shouldCompress(file, duration)) {
           try {
-            const result = await transcodeToAac(file);
+            // Erst versuchen, die vorhandene AAC-Tonspur unveraendert zu uebernehmen
+            // (Reels) - nur wenn das nicht geht, wird neu kodiert (WAV/FLAC, exotische Videos)
+            const result = (await remuxAudioTrack(file)) ?? (await transcodeToAac(file));
             if (result) {
               blob = result.blob;
               fileName = file.name.replace(/\.[^./]+$/, '') + '.m4a';
