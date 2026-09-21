@@ -17,7 +17,8 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 - Tasten anlegen, beschriften, Farbe wählen, löschen – optional mit Kleingedrucktem unter dem Namen („z.B. kurzer Aufschlag, Lob"), damit jeder weiß, welche Situation gemeint ist
 - Jede Taste Herren 1, Damen 1 oder beiden zuordnen; Umschalter zeigt, was eine Mannschaft sieht
 - Anordnung mit der Maus: Tasten an ihren Platz ziehen, in eine andere Zeile oder in eine neue
-- Audiodateien per Datei-Dialog oder Drag & Drop hinzufügen (MP3, M4A, WAV, …)
+- Audiodateien per Datei-Dialog oder Drag & Drop hinzufügen (MP3, M4A, WAV, …) – auch Videos: daraus wird die Tonspur unverändert übernommen, ohne Qualitätsverlust
+- Der Wechsel in die Dev-Ansicht fragt vorher nach – dort lässt sich alles ändern und löschen
 - **Cue-Points** setzen: Wellenform, Klick = Start, Shift-Klick = Ende, Marker ziehen, Vorschau
 - **Lautstärke je Sound** mit Pegelmessung und „Angleichen" – damit nicht jeder Song anders laut ist
 - Sounds innerhalb einer Taste sortieren oder in eine andere Taste verschieben

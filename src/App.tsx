@@ -4,6 +4,7 @@ import { BoardProvider } from './contexts/BoardContext';
 import { TeamProvider, useTeam } from './contexts/TeamContext';
 import { Header } from './components/Header';
 import { TeamPicker } from './components/TeamPicker';
+import { ConfirmDevDialog } from './components/ConfirmDevDialog';
 import { DjView } from './components/dj/DjView';
 import { DeveloperView } from './components/dev/DeveloperView';
 import { ViewMode } from './types';
@@ -15,6 +16,8 @@ function AppContent() {
   const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) === 'dev' ? 'dev' : 'dj'));
   const [panelPadId, setPanelPadId] = useState<string | null>(null);
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
+  // Sicherheitsabfrage vor dem Wechsel in die Dev-Ansicht
+  const [askDev, setAskDev] = useState(false);
   const { stopAll } = useAudio();
   const { team } = useTeam();
 
@@ -37,6 +40,7 @@ function AppContent() {
       if (e.key === 'Escape') {
         setPanelPadId(null);
         setEditingClipId(null);
+        setAskDev(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -48,17 +52,28 @@ function AppContent() {
     if (!team) stopAll();
   }, [team, stopAll]);
 
-  const changeView = useCallback((next: ViewMode) => {
+  const applyView = useCallback((next: ViewMode) => {
     setView(next);
     setPanelPadId(null);
     setEditingClipId(null);
+    setAskDev(false);
   }, []);
+
+  // Von DJ nach Dev nur nach Bestaetigung - dort kann man alles loeschen
+  const changeView = useCallback(
+    (next: ViewMode) => {
+      if (next === 'dev' && view === 'dj') setAskDev(true);
+      else applyView(next);
+    },
+    [view, applyView]
+  );
 
   // Ohne gewaehlte Mannschaft zuerst fragen
   if (!team) return <TeamPicker />;
 
   return (
     <div className="h-full flex flex-col text-white">
+      {askDev && <ConfirmDevDialog onConfirm={() => applyView('dev')} onCancel={() => setAskDev(false)} />}
       <Header view={view} onChangeView={changeView} />
       {view === 'dj' ? (
         <DjView panelPadId={panelPadId} onOpenPanel={setPanelPadId} onClosePanel={() => setPanelPadId(null)} onGoToDev={() => changeView('dev')} />

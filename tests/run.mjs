@@ -44,6 +44,13 @@ async function main() {
   p.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 120)); });
   p.on('dialog', d => d.accept());
   const board = () => p.evaluate(() => JSON.parse(localStorage.getItem('vbdj-v2-board')));
+  /** DJ -> Dev geht nur ueber die Sicherheitsabfrage */
+  const goDev = async () => {
+    await p.click('header button:has-text("Dev")');
+    const dialog = p.locator('[role=alertdialog]');
+    if (await dialog.count()) await dialog.locator('button:has-text("Ja, zur Dev-Ansicht")').click();
+    await p.waitForSelector('text=Einrichtung');
+  };
   const footer = () => p.locator('footer').innerText().then(t => t.replace(/\s+/g, ' '));
   const clipInFooter = async () => ((await footer()).match(/· (\S+)/) || [])[1] ?? null;
   const posInFooter = async () => ((await footer()).match(/(\d:\d\d) -\d/) || [])[1] ?? null;
@@ -64,9 +71,17 @@ async function main() {
     await p.waitForSelector('button.pad3d');
     ok((await p.locator('button.pad3d').count()) === 3, 'DJ zeigt 3 Buttons');
 
-    console.log('\n2) Import + Wiedergabemodus');
+    console.log('\n1b) Sicherheitsabfrage vor der Dev-Ansicht');
     await p.click('header button:has-text("Dev")');
-    await p.waitForSelector('text=Einrichtung');
+    ok((await p.locator('[role=alertdialog]').count()) === 1, 'Abfrage erscheint');
+    await p.click('[role=alertdialog] button:has-text("Abbrechen")');
+    ok((await p.locator('[role=alertdialog]').count()) === 0 && (await p.locator('button.pad3d').count()) === 3, 'Abbrechen bleibt in der DJ-Ansicht');
+    await p.click('header button:has-text("Dev")');
+    await p.keyboard.press('Escape');
+    ok((await p.locator('[role=alertdialog]').count()) === 0, 'Escape schließt die Abfrage');
+
+    console.log('\n2) Import + Wiedergabemodus');
+    await goDev();
     const inputs = p.locator('input[type=file][accept^="audio"]');
     await inputs.nth(0).setInputFiles([fx.kurz, fx.mittel]);
     await p.waitForSelector('text=2 Dateien hinzugefügt');
@@ -172,8 +187,7 @@ async function main() {
     await p.keyboard.press('Space');
 
     console.log('\n9) Ziehen, Export/Import, Persistenz');
-    await p.click('header button:has-text("Dev")');
-    await p.waitForSelector('[data-pad-id]');
+    await goDev();
     const from = await p.locator('[data-pad-id]').filter({ hasText: 'Mix' }).boundingBox();
     const to = await p.locator('[data-row-id="__neue_zeile__"]').boundingBox();
     await p.mouse.move(from.x + from.width / 2, from.y + from.height / 2); await p.mouse.down();
@@ -185,8 +199,7 @@ async function main() {
     await p.evaluate(() => localStorage.clear());
     await p.reload();
     await p.click('button:has-text("Damen 1")');
-    await p.click('header button:has-text("Dev")');
-    await p.waitForSelector('text=Einrichtung');
+    await goDev();
     await p.locator('section input[type=file]').first().setInputFiles(file);
     await p.waitForSelector('text=Bundle importiert');
     b = await board();
