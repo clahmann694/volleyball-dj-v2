@@ -11,7 +11,9 @@ interface Props {
   onEditClip: (clipId: string) => void;
 }
 
-const ACCEPT = 'audio/*,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff';
+// Video ist erlaubt (Instagram-Reels o. ae.) - es wird nur die Tonspur verwendet.
+// video/* sorgt auf dem iPad dafuer, dass auch die Fotos-Mediathek als Quelle angeboten wird.
+const ACCEPT = 'audio/*,video/mp4,video/quicktime,video/x-m4v,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff,.mp4,.m4v,.mov';
 
 /** Ein Button in der Dev-Ansicht: Farbe, Name, Position, Sounds. */
 export function PadCard({ pad, index, total, onEditClip }: Props) {
@@ -85,7 +87,7 @@ export function PadCard({ pad, index, total, onEditClip }: Props) {
         {pad.clips.map((clip, i) => (
           <ClipRow key={clip.id} clip={clip} padId={pad.id} index={i} onEdit={() => onEditClip(clip.id)} />
         ))}
-        {pad.clips.length === 0 && <p className="text-xs text-white/40 px-1">Noch keine Sounds – Dateien hinzufügen oder hierher ziehen.</p>}
+        {pad.clips.length === 0 && <p className="text-xs text-white/40 px-1">Noch keine Sounds – Audio- oder Videodateien hinzufügen oder hierher ziehen.</p>}
       </div>
 
       <div className="mt-2 flex items-center gap-3 text-xs">
@@ -93,7 +95,7 @@ export function PadCard({ pad, index, total, onEditClip }: Props) {
         <button onClick={() => fileInput.current?.click()} disabled={busy || importing} className="px-3 py-1.5 rounded-lg bg-vsg-blue hover:bg-vsg-cyan disabled:opacity-50 font-medium">
           {importing ? 'Importiere…' : '＋ Dateien hinzufügen'}
         </button>
-        <span className="text-white/40 hidden sm:inline">oder MP3s hierher ziehen</span>
+        <span className="text-white/40 hidden sm:inline">oder MP3/MP4 hierher ziehen – bei Videos zählt nur der Ton</span>
         {notice && <span className="ml-auto text-vsg-green font-medium">{notice}</span>}
       </div>
     </div>

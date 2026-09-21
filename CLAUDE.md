@@ -67,6 +67,7 @@ src/
 ### Audio
 - All playback goes through `AudioContext` – never instantiate `Howl` elsewhere.
 - Blob URLs have no extension, so `format` must be passed to Howler (`howlerFormat()`).
+- **Video files are accepted** (mp4/mov/m4v/webm) because the user downloads Instagram reels with a downloader app; only the audio track is played (`html5: true` uses an `<audio>` element, which plays the sound of video containers). `accept` includes `video/*` types so the iPad file picker offers the Photos library.
 - A clip with `cue.end === null` plays to the end of the file; `clip.duration` is read at import (`readDuration`) and refined by the cue editor (`decodeAudioData`).
 - Keep playback exclusive: starting a clip tears down the previous Howl (`teardown()` calls `off()` first so no stale events fire).
 

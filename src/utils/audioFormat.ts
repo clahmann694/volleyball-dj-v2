@@ -13,24 +13,38 @@ const EXT_BY_MIME: Record<string, string> = {
   'audio/aiff': 'aiff',
   'audio/x-aiff': 'aiff',
   'audio/webm': 'webm',
+  // Videodateien (z. B. Instagram-Reels aus Download-Apps): nur die Tonspur wird genutzt
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mp4',
+  'video/x-m4v': 'mp4',
+  'video/webm': 'webm',
 };
 
-const AUDIO_EXT = /\.(mp3|m4a|mp4|aac|wav|ogg|oga|flac|aif|aiff|webm)$/i;
+const MEDIA_EXT = /\.(mp3|m4a|mp4|m4v|mov|aac|wav|ogg|oga|flac|aif|aiff|webm)$/i;
 
 function extension(fileName: string): string | null {
   const m = fileName.match(/\.([a-z0-9]{2,5})$/i);
   return m ? m[1].toLowerCase() : null;
 }
 
-/** Howler braucht bei Blob-URLs das Format explizit, weil die URL keine Endung hat. */
+/**
+ * Howler braucht bei Blob-URLs das Format explizit, weil die URL keine Endung hat.
+ * Video-Container (mp4/mov/m4v) werden als 'mp4' gemeldet - das <audio>-Element
+ * spielt daraus die Tonspur.
+ */
 export function howlerFormat(fileName: string, mimeType: string): string {
   const ext = extension(fileName);
-  if (ext) return ext === 'mp4' ? 'm4a' : ext === 'aif' ? 'aiff' : ext;
+  if (ext) {
+    if (ext === 'mov' || ext === 'm4v' || ext === 'mp4') return 'mp4';
+    if (ext === 'aif') return 'aiff';
+    return ext;
+  }
   return EXT_BY_MIME[mimeType] ?? 'mp3';
 }
 
+/** Audio- und Videodateien; bei Video wird nur die Tonspur abgespielt. */
 export function isAudioFile(file: File): boolean {
-  return file.type.startsWith('audio/') || AUDIO_EXT.test(file.name);
+  return file.type.startsWith('audio/') || file.type.startsWith('video/') || MEDIA_EXT.test(file.name);
 }
 
 /** "here-comes-the-boom.mp3" -> "here comes the boom" */
