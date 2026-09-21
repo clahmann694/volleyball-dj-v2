@@ -22,9 +22,9 @@ export function BundleControls() {
     };
   }, [board]);
 
-  const flash = (text: string) => {
+  const flash = (text: string, ms = 5000) => {
     setMessage(text);
-    setTimeout(() => setMessage(null), 5000);
+    setTimeout(() => setMessage(null), ms);
   };
 
   const doExport = async () => {
@@ -33,7 +33,7 @@ export function BundleControls() {
       const blob = await exportBoard();
       const date = new Date().toISOString().slice(0, 10);
       downloadBlob(blob, `vb-dj-${date}.vbdj`);
-      flash(`Export fertig (${formatBytes(blob.size)})`);
+      flash(`Export fertig (${formatBytes(blob.size)}) – liegt in „Downloads“. Die Datei nicht öffnen, sondern ans andere Gerät schicken (AirDrop) und dort über „Importieren“ laden.`, 12000);
     } catch (e) {
       console.error(e);
       flash('Export fehlgeschlagen');
@@ -100,10 +100,12 @@ export function BundleControls() {
             Dauerhaft gespeichert: {info.persisted === null ? 'unbekannt' : info.persisted ? 'ja' : 'nein'}
           </span>
         )}
-        {(working || message) && <span className="ml-auto text-white/80">{working ?? message}</span>}
       </div>
+      {(working || message) && <p className="mt-2 text-sm text-vsg-ice">{working ?? message}</p>}
       <p className="mt-2 text-xs text-white/40">
-        Ein Bundle enthält alle Buttons, Cue-Points und Audiodateien – damit ziehst du die Einrichtung vom Mac aufs iPad oder legst ein Backup an.
+        Ein Bundle (.vbdj) enthält alle Buttons, Cue-Points und Audiodateien. Es lässt sich nicht mit einem Programm öffnen – nur hier über
+        „Importieren“ laden. So ziehst du die Einrichtung vom Mac aufs iPad (AirDrop) oder legst ein Backup an. Achtung: Import ersetzt die
+        komplette Einrichtung auf diesem Gerät.
       </p>
     </section>
   );
