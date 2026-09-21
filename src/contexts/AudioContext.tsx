@@ -15,6 +15,8 @@ interface AudioState {
   playing: PlayingClip | null;
   clipName: string | null;
   isPlaying: boolean;
+  /** Angehalten - laesst sich an derselben Stelle fortsetzen */
+  isPaused: boolean;
   /** Absolute Position in der Datei (Sekunden) */
   position: number;
   /** Aktiver Abspielbereich */
@@ -28,6 +30,7 @@ interface AudioState {
 type AudioAction =
   | { type: 'START'; playing: PlayingClip; clipName: string; cue: CuePoint; fileDuration: number | null }
   | { type: 'PLAYING'; isPlaying: boolean }
+  | { type: 'PAUSED'; isPaused: boolean }
   | { type: 'POSITION'; position: number }
   | { type: 'STOPPED' }
   | { type: 'VOLUME'; volume: number }
@@ -36,8 +39,12 @@ type AudioAction =
   | { type: 'CLEAR_ERROR' };
 
 interface AudioContextType extends AudioState {
-  play: (padId: string, clip: SoundClip, cueOverride?: CuePoint) => void;
+  play: (padId: string, clip: SoundClip, cueOverride?: CuePoint, gainOverride?: number) => void;
+  pause: () => void;
+  resume: () => void;
   stopAll: () => void;
+  /** Wird aufgerufen, wenn ein Sound von selbst zu Ende geht (nicht bei Stop/Fade) */
+  subscribeEnded: (cb: (info: PlayingClip) => void) => () => void;
   fadeOut: (ms?: number) => void;
   setVolume: (volume: number) => void;
   clearError: () => void;
@@ -54,6 +61,7 @@ const initialState: AudioState = {
   playing: null,
   clipName: null,
   isPlaying: false,
+  isPaused: false,
   position: 0,
   cue: null,
   fileDuration: null,
@@ -73,15 +81,18 @@ function reducer(state: AudioState, action: AudioAction): AudioState {
         fileDuration: action.fileDuration,
         position: action.cue.start,
         isPlaying: false,
+        isPaused: false,
         isFading: false,
         error: null,
       };
     case 'PLAYING':
-      return { ...state, isPlaying: action.isPlaying };
+      return { ...state, isPlaying: action.isPlaying, isPaused: action.isPlaying ? false : state.isPaused };
+    case 'PAUSED':
+      return { ...state, isPaused: action.isPaused, isPlaying: action.isPaused ? false : state.isPlaying };
     case 'POSITION':
       return { ...state, position: action.position };
     case 'STOPPED':
-      return { ...state, playing: null, clipName: null, isPlaying: false, position: 0, cue: null, fileDuration: null, isFading: false };
+      return { ...state, playing: null, clipName: null, isPlaying: false, isPaused: false, position: 0, cue: null, fileDuration: null, isFading: false };
     case 'VOLUME':
       return { ...state, volume: action.volume };
     case 'FADING':
@@ -103,6 +114,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const urlRef = useRef<string | null>(null);
   const tickRef = useRef<number | null>(null);
   const volumeRef = useRef(state.volume);
+  // Lautstaerke des aktuellen Sounds (0..1), wird mit der Gesamtlautstaerke multipliziert
+  const gainRef = useRef(1);
+  // Howler-Sound-ID des laufenden Sounds - noetig, um nach Pause an derselben Stelle fortzusetzen
+  const soundIdRef = useRef<number | null>(null);
+  const endedListeners = useRef(new Set<(info: PlayingClip) => void>());
   // Laufnummer: verhindert, dass ein langsam geladener Sound einen neueren ueberholt
   const tokenRef = useRef(0);
 
@@ -132,6 +148,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       howlRef.current.unload();
       howlRef.current = null;
     }
+    soundIdRef.current = null;
     if (urlRef.current) {
       URL.revokeObjectURL(urlRef.current);
       urlRef.current = null;
@@ -147,11 +164,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, [teardown]);
 
   const play = useCallback(
-    async (padId: string, clip: SoundClip, cueOverride?: CuePoint) => {
+    async (padId: string, clip: SoundClip, cueOverride?: CuePoint, gainOverride?: number) => {
       const token = ++tokenRef.current;
       teardown();
       const cue = cueOverride ?? clip.cue;
-      dispatch({ type: 'START', playing: { padId, clipId: clip.id }, clipName: clip.name, cue, fileDuration: clip.duration });
+      const gain = Math.min(1, Math.max(0, gainOverride ?? clip.gain ?? 1));
+      gainRef.current = gain;
+      const info: PlayingClip = { padId, clipId: clip.id };
+      dispatch({ type: 'START', playing: info, clipName: clip.name, cue, fileDuration: clip.duration });
 
       let stored;
       try {
@@ -175,12 +195,17 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         teardown();
         dispatch({ type: 'STOPPED' });
       };
+      // Natuerliches Ende: erst aufraeumen, dann die Zuhoerer (Auto-Weiterspielen) informieren
+      const ended = () => {
+        finish();
+        for (const cb of endedListeners.current) cb(info);
+      };
 
       const howl = new Howl({
         src: [url],
         html5: true,
         format: [howlerFormat(clip.fileName, clip.mimeType)],
-        volume: volumeRef.current,
+        volume: volumeRef.current * gain,
         sprite: useSprite ? { clip: [start * 1000, (end - start) * 1000] } : undefined,
         onplay: () => {
           dispatch({ type: 'PLAYING', isPlaying: true });
@@ -190,7 +215,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'PLAYING', isPlaying: false });
           stopTicking();
         },
-        onend: finish,
+        onend: ended,
         onstop: finish,
         onloaderror: (_id, err) => {
           console.warn('Audio konnte nicht geladen werden', err);
@@ -209,14 +234,37 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       urlRef.current = url;
 
       if (useSprite) {
-        howl.play('clip');
+        soundIdRef.current = howl.play('clip');
       } else {
         const id = howl.play();
+        soundIdRef.current = id;
         if (start > 0) howl.seek(start, id);
       }
     },
     [teardown, startTicking, stopTicking]
   );
+
+  const pause = useCallback(() => {
+    const howl = howlRef.current;
+    if (!howl || !howl.playing()) return;
+    howl.pause(soundIdRef.current ?? undefined);
+    dispatch({ type: 'PAUSED', isPaused: true });
+  }, []);
+
+  const resume = useCallback(() => {
+    const howl = howlRef.current;
+    if (!howl || soundIdRef.current === null) return;
+    // play(id) setzt einen pausierten Sound an derselben Stelle fort - auch innerhalb eines Sprites
+    howl.play(soundIdRef.current);
+    dispatch({ type: 'PAUSED', isPaused: false });
+  }, []);
+
+  const subscribeEnded = useCallback((cb: (info: PlayingClip) => void) => {
+    endedListeners.current.add(cb);
+    return () => {
+      endedListeners.current.delete(cb);
+    };
+  }, []);
 
   const fadeOut = useCallback(
     (ms = 1500) => {
@@ -235,14 +283,14 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     volumeRef.current = v;
     localStorage.setItem(VOLUME_KEY, String(v));
     dispatch({ type: 'VOLUME', volume: v });
-    howlRef.current?.volume(v);
+    howlRef.current?.volume(v * gainRef.current);
   }, []);
 
   const clearError = useCallback(() => dispatch({ type: 'CLEAR_ERROR' }), []);
 
   const value = useMemo<AudioContextType>(
-    () => ({ ...state, play, stopAll, fadeOut, setVolume, clearError }),
-    [state, play, stopAll, fadeOut, setVolume, clearError]
+    () => ({ ...state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded }),
+    [state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded]
   );
 
   return <AudioCtx.Provider value={value}>{children}</AudioCtx.Provider>;

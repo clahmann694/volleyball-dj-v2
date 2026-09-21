@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { allPads, BoardConfig, BoardRow, SoundClip, SoundPad, TeamId } from '../types';
+import { allPads, BoardConfig, BoardRow, PlaybackMode, SoundClip, SoundPad, TeamId } from '../types';
 import { loadBoard, markChanged, markExported, saveBoard } from '../storage/boardStore';
 import { deleteFile, putFile, requestPersistence } from '../storage/audioStore';
 import { DEFAULT_BOARD } from '../config/defaultBoard';
@@ -39,14 +39,18 @@ interface BoardContextType {
   addPad: (rowId: string, name: string, color: string, teams: TeamId[]) => void;
   /** Mannschaften eines Buttons setzen (leere Liste wird ignoriert) */
   setPadTeams: (padId: string, teams: TeamId[]) => void;
-  updatePad: (padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color'>>) => void;
+  updatePad: (padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color' | 'playback'>>) => void;
   /** left/right: innerhalb der Zeile; up/down: ans Ende der Nachbarzeile (down in letzter Zeile = neue Zeile) */
   movePad: (padId: string, direction: MoveDirection) => void;
   /** Setzt ein Pad an eine genaue Position (Ziehen mit der Maus). rowId NEW_ROW = neue Zeile am Ende. */
   movePadTo: (padId: string, rowId: string, index: number) => void;
   deletePad: (padId: string) => Promise<void>;
   addClipsFromFiles: (padId: string, files: Iterable<File>) => Promise<number>;
-  updateClip: (clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration'>>) => void;
+  updateClip: (clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration' | 'gain'>>) => void;
+  /** Reihenfolge innerhalb des Buttons aendern */
+  moveClip: (clipId: string, delta: number) => void;
+  /** Sound in einen anderen Button verschieben (ans Ende) */
+  moveClipToPad: (clipId: string, targetPadId: string) => void;
   deleteClip: (clipId: string) => Promise<void>;
   exportBoard: () => Promise<Blob>;
   importBoard: (file: File) => Promise<void>;
@@ -131,7 +135,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     setBoard(b => ({
       ...b,
       rows: b.rows.map(r =>
-        r.id === rowId ? { ...r, pads: [...r.pads, { id: newId(), name: name.trim() || 'Neuer Button', color, teams, clips: [] }] } : r
+        r.id === rowId ? { ...r, pads: [...r.pads, { id: newId(), name: name.trim() || 'Neuer Button', color, teams, playback: 'single' as PlaybackMode, clips: [] }] } : r
       ),
     }));
   }, []);
@@ -142,7 +146,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     setBoard(b => mapPads(b, pad => (pad.id === padId ? { ...pad, teams } : pad)));
   }, []);
 
-  const updatePad = useCallback((padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color'>>) => {
+  const updatePad = useCallback((padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color' | 'playback'>>) => {
     setBoard(b => mapPads(b, pad => (pad.id === padId ? { ...pad, ...patch } : pad)));
   }, []);
 
@@ -247,6 +251,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
           size: blob.size,
           duration,
           cue: { start: 0, end: null },
+          gain: 1,
         });
       }
       if (clips.length > 0) {
@@ -259,12 +264,39 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const updateClip = useCallback((clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration'>>) => {
+  const updateClip = useCallback((clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration' | 'gain'>>) => {
     setBoard(b =>
       mapPads(b, pad =>
         pad.clips.some(c => c.id === clipId) ? { ...pad, clips: pad.clips.map(c => (c.id === clipId ? { ...c, ...patch } : c)) } : pad
       )
     );
+  }, []);
+
+  const moveClip = useCallback((clipId: string, delta: number) => {
+    setBoard(b =>
+      mapPads(b, pad => {
+        const from = pad.clips.findIndex(c => c.id === clipId);
+        if (from < 0) return pad;
+        const to = Math.max(0, Math.min(pad.clips.length - 1, from + delta));
+        if (to === from) return pad;
+        const clips = [...pad.clips];
+        const [c] = clips.splice(from, 1);
+        clips.splice(to, 0, c);
+        return { ...pad, clips };
+      })
+    );
+  }, []);
+
+  const moveClipToPad = useCallback((clipId: string, targetPadId: string) => {
+    setBoard(b => {
+      const ref = allPads(b).flatMap(p => p.clips.map(c => ({ c, p }))).find(x => x.c.id === clipId);
+      if (!ref || ref.p.id === targetPadId) return b;
+      return mapPads(b, pad => {
+        if (pad.id === ref.p.id) return { ...pad, clips: pad.clips.filter(c => c.id !== clipId) };
+        if (pad.id === targetPadId) return { ...pad, clips: [...pad.clips, ref.c] };
+        return pad;
+      });
+    });
   }, []);
 
   const deleteClip = useCallback(
@@ -307,8 +339,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<BoardContextType>(
-    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard }),
-    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard]
+    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, moveClip, moveClipToPad, deleteClip, exportBoard, importBoard, resetBoard }),
+    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, moveClip, moveClipToPad, deleteClip, exportBoard, importBoard, resetBoard]
   );
 
   return <BoardCtx.Provider value={value}>{children}</BoardCtx.Provider>;

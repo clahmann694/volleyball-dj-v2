@@ -5,7 +5,7 @@ import { formatTime } from '../../utils/formatTime';
 
 /** Untere Leiste: was laeuft, Fortschritt, Fade-out, STOP, Lautstaerke. */
 export function TransportBar() {
-  const { playing, clipName, isPlaying, position, cue, fileDuration, volume, setVolume, stopAll, fadeOut, isFading, error, clearError } = useAudio();
+  const { playing, clipName, isPlaying, isPaused, position, cue, fileDuration, volume, setVolume, stopAll, fadeOut, isFading, error, clearError, pause, resume } = useAudio();
   const { padIndex } = useBoard();
 
   // Fehlermeldungen verschwinden von selbst
@@ -42,7 +42,8 @@ export function TransportBar() {
               <span className="font-semibold truncate">{pad?.name ?? '…'}</span>
               <span className="text-white/40">·</span>
               <span className="text-white/70 truncate">{clipName}</span>
-              {!isPlaying && <span className="text-xs text-white/40">lädt…</span>}
+              {!isPlaying && !isPaused && <span className="text-xs text-white/40">lädt…</span>}
+              {isPaused && <span className="text-xs text-amber-300 font-medium">pausiert</span>}
               {isFading && <span className="text-xs text-vsg-ice animate-pulse">Fade…</span>}
             </div>
             <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -66,6 +67,17 @@ export function TransportBar() {
       >
         <span>↘</span>
         <span>Fade out</span>
+      </button>
+
+      {/* Pause / Weiter */}
+      <button
+        onClick={isPaused ? resume : pause}
+        disabled={!playing || (!isPlaying && !isPaused) || isFading}
+        aria-label={isPaused ? 'Weiter' : 'Pause'}
+        className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:hover:bg-white/10 font-semibold text-sm min-w-[104px] justify-center"
+      >
+        <span>{isPaused ? '▶' : '⏸'}</span>
+        <span>{isPaused ? 'Weiter' : 'Pause'}</span>
       </button>
 
       {/* STOP */}

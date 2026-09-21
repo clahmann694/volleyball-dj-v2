@@ -7,6 +7,7 @@ import { TeamPicker } from './components/TeamPicker';
 import { DjView } from './components/dj/DjView';
 import { DeveloperView } from './components/dev/DeveloperView';
 import { ViewMode } from './types';
+import { useWakeLock } from './hooks/useWakeLock';
 
 const VIEW_KEY = 'vbdj-v2-view';
 
@@ -16,6 +17,9 @@ function AppContent() {
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   const { stopAll } = useAudio();
   const { team } = useTeam();
+
+  // Im Spielbetrieb darf sich das iPad nicht sperren
+  useWakeLock(!!team && view === 'dj');
 
   useEffect(() => {
     localStorage.setItem(VIEW_KEY, view);

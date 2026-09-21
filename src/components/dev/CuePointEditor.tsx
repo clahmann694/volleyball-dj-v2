@@ -2,7 +2,7 @@ import { CSSProperties, PointerEvent as ReactPointerEvent, MouseEvent as ReactMo
 import { ClipRef, useBoard } from '../../contexts/BoardContext';
 import { useAudio } from '../../contexts/AudioContext';
 import { getFile } from '../../storage/audioStore';
-import { computePeaks } from '../../utils/waveform';
+import { computePeaks, gainForTarget, levelDb, TARGET_DB, WaveformData } from '../../utils/waveform';
 import { formatTimePrecise } from '../../utils/formatTime';
 import { Waveform } from './Waveform';
 
@@ -26,6 +26,8 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
   const [start, setStart] = useState(clip.cue.start);
   const [end, setEnd] = useState(clip.cue.end ?? clip.duration ?? 0);
   const [peaks, setPeaks] = useState<Float32Array | null>(null);
+  const [wave, setWave] = useState<WaveformData | null>(null);
+  const [gain, setGain] = useState(clip.gain ?? 1);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [dragging, setDragging] = useState<'start' | 'end' | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -51,6 +53,7 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
         const result = await computePeaks(stored.blob);
         if (!alive) return;
         setPeaks(result.peaks);
+        setWave(result);
         setDuration(result.duration);
         setEnd(prev => (clip.cue.end == null ? result.duration : Math.min(prev, result.duration)));
       } catch (e) {
@@ -112,16 +115,22 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
 
   const togglePreview = () => {
     if (isPreviewing) audio.stopAll();
-    else audio.play(pad.id, clip, { start: round1(start), end: effectiveEnd() });
+    else audio.play(pad.id, clip, { start: round1(start), end: effectiveEnd() }, gain);
   };
 
   const save = () => {
     updateClip(clip.id, {
       cue: { start: round1(start), end: effectiveEnd() },
       duration: duration || clip.duration,
+      gain: Math.round(gain * 100) / 100,
     });
     onClose();
   };
+
+  // Gemessener Pegel des gewaehlten Bereichs und der Pegel nach Anwendung der Lautstaerke
+  const measured = wave ? levelDb(wave, start, end) : null;
+  const effective = measured !== null ? measured + 20 * Math.log10(Math.max(gain, 0.0001)) : null;
+  const suggested = measured !== null ? gainForTarget(measured) : null;
 
   const reset = () => {
     setStart(0);
@@ -190,6 +199,44 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
           <div className="mt-4 grid grid-cols-2 gap-3">
             <NumberField label="Start (Sekunden)" value={start} max={duration} onChange={setStartSafe} />
             <NumberField label="Ende (Sekunden)" value={end} max={duration} onChange={setEndSafe} />
+          </div>
+
+          {/* Lautstaerke dieses Sounds */}
+          <div className="mt-4 rounded-xl bg-black/30 p-3">
+            <div className="flex items-center justify-between text-sm text-white/60">
+              <span>
+                Lautstärke <strong className="text-white font-mono">{Math.round(gain * 100)} %</strong>
+              </span>
+              {measured !== null && (
+                <span title="Mittlerer Pegel des gewählten Bereichs (dBFS); Ziel für gleich laute Sounds: −18 dB">
+                  Pegel <strong className="text-white font-mono">{effective!.toFixed(1)} dB</strong>
+                  <span className="text-white/40"> (Datei {measured.toFixed(1)} dB)</span>
+                </span>
+              )}
+            </div>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="range"
+                min={5}
+                max={100}
+                step={1}
+                value={Math.round(gain * 100)}
+                onChange={e => setGain(parseInt(e.target.value, 10) / 100)}
+                className="slider flex-1"
+                aria-label="Lautstärke dieses Sounds"
+              />
+              <button
+                onClick={() => suggested !== null && setGain(suggested)}
+                disabled={suggested === null}
+                title={`Auf ${TARGET_DB} dB angleichen – leisere Sounds bleiben bei 100 %, lautere werden abgesenkt`}
+                className="h-9 px-3 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-medium whitespace-nowrap"
+              >
+                Angleichen{suggested !== null && suggested < 1 ? ` → ${Math.round(suggested * 100)} %` : ''}
+              </button>
+            </div>
+            {measured !== null && suggested === 1 && gain === 1 && (
+              <p className="mt-1 text-xs text-white/40">Dieser Sound ist leiser als das Ziel – lauter als 100 % geht nicht, dafür die lauteren angleichen.</p>
+            )}
           </div>
         </div>
 

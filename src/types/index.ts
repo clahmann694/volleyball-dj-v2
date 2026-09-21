@@ -17,7 +17,17 @@ export interface SoundClip {
   /** Gesamtdauer der Datei in Sekunden, null wenn (noch) unbekannt */
   duration: number | null;
   cue: CuePoint;
+  /** Lautstaerke dieses Sounds relativ zur Gesamtlautstaerke, 0..1 (1 = unveraendert) */
+  gain: number;
 }
+
+/**
+ * Was passiert, wenn ein Button gedrueckt wird:
+ * single   - ein (zufaelliger) Sound, danach Stille (Jingles)
+ * sequence - alle Sounds der Reihe nach, dann von vorn (Warm-up-Playlist)
+ * shuffle  - alle Sounds in zufaelliger Reihenfolge ohne direkte Wiederholung, endlos
+ */
+export type PlaybackMode = 'single' | 'sequence' | 'shuffle';
 
 /** Mannschaft, für die aufgelegt wird. */
 export type TeamId = 'herren' | 'damen';
@@ -30,6 +40,7 @@ export interface SoundPad {
   color: string;
   /** Mannschaften, bei denen dieser Button erscheint (mindestens eine) */
   teams: TeamId[];
+  playback: PlaybackMode;
   clips: SoundClip[];
 }
 
@@ -41,7 +52,7 @@ export interface BoardRow {
 
 /** Das Board besteht aus frei belegbaren Zeilen; alle Buttons sind gleich breit. */
 export interface BoardConfig {
-  version: 4;
+  version: 5;
   rows: BoardRow[];
 }
 

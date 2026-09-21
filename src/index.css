@@ -160,6 +160,15 @@ button {
     animation: pad3d-glow 1.2s ease-in-out infinite;
   }
 
+  .pad3d--active.pad3d--paused {
+    animation: none;
+    box-shadow:
+      0 14px 22px -8px rgba(0, 0, 0, 0.75),
+      0 4px 0 color-mix(in srgb, var(--c) 45%, black),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 0 18px color-mix(in srgb, var(--c) 50%, transparent);
+  }
+
   .pad3d--empty {
     filter: saturate(0.35) brightness(0.6);
     cursor: default;

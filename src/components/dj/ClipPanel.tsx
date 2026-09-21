@@ -2,6 +2,7 @@ import { CSSProperties } from 'react';
 import { SoundPad } from '../../types';
 import { useAudio } from '../../contexts/AudioContext';
 import { formatTime } from '../../utils/formatTime';
+import { randomClip } from '../../utils/playback';
 
 interface Props {
   pad: SoundPad;
@@ -13,7 +14,7 @@ export function ClipPanel({ pad, onClose }: Props) {
   const { playing, play, stopAll } = useAudio();
   const style = { '--c': pad.color } as CSSProperties;
 
-  const playRandom = () => play(pad.id, pad.clips[Math.floor(Math.random() * pad.clips.length)]);
+  const playRandom = () => play(pad.id, randomClip(pad.clips, playing?.clipId ?? null));
 
   return (
     <aside className="w-72 shrink-0 flex flex-col bg-vsg-navy-900/95 backdrop-blur-xl border-l border-white/10" style={style}>

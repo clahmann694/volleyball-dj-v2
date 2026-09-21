@@ -2,6 +2,7 @@ import { CSSProperties } from 'react';
 import { SoundPad as SoundPadModel } from '../../types';
 import { useAudio } from '../../contexts/AudioContext';
 import { padTextColor } from '../../config/defaultBoard';
+import { firstClip } from '../../utils/playback';
 
 interface Props {
   pad: SoundPadModel;
@@ -14,7 +15,7 @@ interface Props {
  * Die Ecke oben rechts oeffnet die Liste aller Clips.
  */
 export function SoundPad({ pad, onOpenPanel }: Props) {
-  const { playing, play, stopAll } = useAudio();
+  const { playing, isPaused, play, stopAll } = useAudio();
   const isActive = playing?.padId === pad.id;
   const hasClips = pad.clips.length > 0;
   const style = { '--c': pad.color, '--t': padTextColor(pad.color) } as CSSProperties;
@@ -25,8 +26,10 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
       stopAll();
       return;
     }
-    play(pad.id, pad.clips[Math.floor(Math.random() * pad.clips.length)]);
+    const clip = firstClip(pad);
+    if (clip) play(pad.id, clip);
   };
+  const modeHint = pad.playback === 'sequence' ? '⟳' : pad.playback === 'shuffle' ? '⤮' : '';
 
   return (
     <div className="pad-wrap" style={style}>
@@ -35,7 +38,7 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
         disabled={!hasClips}
         aria-pressed={isActive}
         title={hasClips ? pad.name : `${pad.name} – noch keine Sounds zugewiesen`}
-        className={`pad3d ${isActive ? 'pad3d--active' : ''} ${!hasClips ? 'pad3d--empty' : ''}`}
+        className={`pad3d ${isActive ? 'pad3d--active' : ''} ${isActive && isPaused ? 'pad3d--paused' : ''} ${!hasClips ? 'pad3d--empty' : ''}`}
       >
         <span className="pad3d__cap">
           <span className="pad3d__label">{pad.name}</span>
@@ -43,6 +46,11 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
         </span>
       </button>
 
+      {modeHint && hasClips && (
+        <span className="absolute top-1 left-1.5 text-[13px] text-white/80 drop-shadow z-10" title={pad.playback === 'sequence' ? 'Spielt alle Sounds der Reihe nach' : 'Spielt alle Sounds in zufälliger Reihenfolge'}>
+          {modeHint}
+        </span>
+      )}
       {pad.clips.length > 1 && (
         <button
           onClick={e => {

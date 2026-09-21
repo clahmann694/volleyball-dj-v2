@@ -1,5 +1,5 @@
 import { CSSProperties, ChangeEvent, DragEvent, useRef, useState } from 'react';
-import { SoundPad, TeamId } from '../../types';
+import { PlaybackMode, SoundPad, TeamId } from '../../types';
 import { useBoard } from '../../contexts/BoardContext';
 import { TEAMS } from '../../config/teams';
 import { ClipRow } from './ClipRow';
@@ -17,6 +17,31 @@ interface Props {
 const ACCEPT = 'audio/*,video/mp4,video/quicktime,video/x-m4v,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff,.mp4,.m4v,.mov';
 
 /** Ein Button in der Dev-Ansicht: Farbe, Name, Position, Sounds. */
+const MODES: Array<{ id: PlaybackMode; label: string; hint: string }> = [
+  { id: 'single', label: 'Einzeln', hint: 'Ein Sound (bei mehreren zufällig), danach Stille – für Jingles' },
+  { id: 'sequence', label: 'Der Reihe nach', hint: 'Alle Sounds nacheinander, dann von vorn – für Playlists' },
+  { id: 'shuffle', label: 'Zufällig endlos', hint: 'Alle Sounds in zufälliger Reihenfolge, ohne direkte Wiederholung' },
+];
+
+function PlaybackSwitch({ value, onChange }: { value: PlaybackMode; onChange: (m: PlaybackMode) => void }) {
+  return (
+    <div className="flex rounded-lg bg-white/10 p-0.5" role="radiogroup" aria-label="Wiedergabe">
+      {MODES.map(m => (
+        <button
+          key={m.id}
+          role="radio"
+          aria-checked={value === m.id}
+          title={m.hint}
+          onClick={() => onChange(m.id)}
+          className={`px-2.5 py-1 rounded-md font-medium transition-colors ${value === m.id ? 'bg-vsg-cyan text-white' : 'text-vsg-ice hover:text-white'}`}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Zwei Schalter: bei welchen Mannschaften erscheint dieser Button? */
 function TeamChips({ pad, onChange }: { pad: SoundPad; onChange: (teams: TeamId[]) => void }) {
   const toggle = (id: TeamId) => {
@@ -111,9 +136,16 @@ export function PadCard({ pad, rowIndex, onEditClip }: Props) {
         <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400 ml-auto">🗑</button>
       </div>
 
+      {pad.clips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs">
+          <span className="text-white/50">Beim Drücken:</span>
+          <PlaybackSwitch value={pad.playback} onChange={playback => updatePad(pad.id, { playback })} />
+        </div>
+      )}
+
       <div className="space-y-1.5">
         {pad.clips.map((clip, i) => (
-          <ClipRow key={clip.id} clip={clip} padId={pad.id} index={i} onEdit={() => onEditClip(clip.id)} />
+          <ClipRow key={clip.id} clip={clip} padId={pad.id} index={i} total={pad.clips.length} onEdit={() => onEditClip(clip.id)} />
         ))}
         {pad.clips.length === 0 && <p className="text-xs text-white/40 px-1">Noch keine Sounds – Audio- oder Videodateien hinzufügen oder hierher ziehen.</p>}
       </div>
