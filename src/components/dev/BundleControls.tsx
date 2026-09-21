@@ -53,7 +53,13 @@ export function BundleControls() {
       flash('Bundle importiert');
     } catch (err) {
       console.error(err);
-      flash(err instanceof Error ? err.message : 'Import fehlgeschlagen');
+      const isBundleName = /\.(vbdj|zip)$/i.test(file.name);
+      flash(
+        isBundleName && err instanceof Error && !/central directory|zip/i.test(err.message)
+          ? err.message
+          : `„${file.name}“ ist keine VB-DJ-Datei. Bitte die exportierte .vbdj-Datei auswählen.`,
+        8000
+      );
     } finally {
       setWorking(null);
     }
@@ -79,7 +85,8 @@ export function BundleControls() {
         <button onClick={doExport} disabled={disabled || clipCount === 0} className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-sm font-medium">
           ⬇ Exportieren (.vbdj)
         </button>
-        <input ref={fileInput} type="file" accept=".vbdj,.zip,application/zip" hidden onChange={doImport} />
+        {/* Bewusst ohne accept-Filter: iOS graut unbekannte Endungen wie .vbdj sonst im Dateidialog aus */}
+        <input ref={fileInput} type="file" hidden onChange={doImport} />
         <button onClick={() => fileInput.current?.click()} disabled={disabled} className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-sm font-medium">
           ⬆ Importieren
         </button>
