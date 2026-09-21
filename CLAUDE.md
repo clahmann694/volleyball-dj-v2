@@ -13,6 +13,8 @@ The board is a list of **rows**, each holding any number of **pads** (buttons su
 
 **Teams:** the app is used for two teams (`TEAMS` in `src/config/teams.ts`: Herren 1, Damen 1). On every start it asks which one (`TeamPicker`); the DJ view then only shows pads assigned to that team, and rows that end up empty are hidden. A pad carries `teams: TeamId[]` and belongs to one or both – never zero (`setPadTeams` refuses an empty list). The choice is deliberately **asked on every load**, only pre-selected from `vbdj-v2-last-team`: going into a match with the wrong team's buttons is worse than one tap. Switching later: the team chip in the header.
 
+**Playback per pad** (`playback`): `single` = one random clip, then silence (jingles); `sequence` = all clips in order, looping (warm-up playlist); `shuffle` = endless random order without immediate repeats. Auto-advance lives in `DjView` (subscribes to `AudioContext.subscribeEnded`, which only fires on natural end – never on STOP/fade). Each clip has a `gain` (0..1) multiplied with the master volume; the cue editor measures the region's RMS level in dBFS and "Angleichen" sets gain to reach `TARGET_DB` (−18) – quieter clips stay at 100 % because Howler cannot boost above 1. Pause/resume keeps the Howler sound id (`soundIdRef`) and calls `play(id)`, which also respects the sprite end. `useWakeLock` keeps the screen on while a team is chosen and the DJ view is open.
+
 Two views:
 - **DJ view** – the dashboard used during games: 3D arcade-style pads (CSS only: `.pad3d` base + `.pad3d__cap`), side panel for multi-clip pads, transport bar (now playing, fade out, STOP, volume). Space = stop all.
 - **Dev view** – setup: a team switch (Beide / Herren 1 / Damen 1), a full-width **arrangement editor** (`LayoutEditor`) where pads are dragged into place, plus one settings card per pad (name, colour, team chips, sounds, cue) and `.vbdj` export/import. Per-pad arrow buttons were removed – she found them cumbersome.
@@ -31,7 +33,7 @@ npm run type-check   # tsc --noEmit (strict, noUnusedLocals)
 ### Tech Stack
 - React 19 + TypeScript (strict), Vite 7, Tailwind CSS 3.4
 - Howler.js for playback (`html5: true`, blob URLs, cue points as Howler **sprites**)
-- IndexedDB for audio blobs, localStorage for board config, JSZip for bundles
+- IndexedDB for audio blobs, localStorage for board config, JSZip for bundles (lazy-loaded – Dev view only; same for mp4-muxer, keeps the DJ bundle at ~290 kB)
 - vite-plugin-pwa for the installable app shell (registration in `src/registerServiceWorker.ts`, `injectRegister: null`)
 - WebCodecs `AudioEncoder` + `mp4-muxer` to keep only the audio track of imported videos
 
@@ -64,7 +66,9 @@ src/
 │   ├── TeamPicker.tsx        # start question "Für wen legst du auf?"
 │   ├── dj/                   # DjView, SoundBoard (rows), SoundPad (3D button), ClipPanel, TransportBar
 │   └── dev/                  # DeveloperView, LayoutEditor (drag & drop), PadCard, ColorSwatches, ClipRow, CuePointEditor, Waveform, BundleControls
-├── utils/                    # audioFormat (mime/ext, duration), audioTranscode (video → AAC/M4A), bundle (zip), waveform (peaks), formatTime, id
+├── hooks/useWakeLock.ts      # screen stays on during the match
+├── utils/                    # audioFormat, audioTranscode (video → AAC/M4A), bundle (zip, lazy JSZip), waveform (peaks + RMS level), playback (first/next/random clip), formatTime, id
+└── tests/ (repo root)        # run.mjs (e2e suite, `npm test`), fixtures.mjs (WAV generator)
 └── App.tsx                   # providers, view state, keyboard shortcuts (Space, Escape)
 ```
 
@@ -106,6 +110,7 @@ backup – keep export/import backwards compatible.
 - **Never use percentage padding on the vertical axis of `.pad3d__cap`** – percentages resolve against the element's *width*, so a full-width pad (one pad per row) got 60 px top/bottom padding and the label collapsed to 0 px (found 2026-09-21). Vertical padding is in px, horizontal may stay in %; the cap uses `display: grid; place-content: center` so the label keeps its intrinsic height.
 - Pad labels must survive long German words ("Trommelwirbel", "krasser Angriff"): 2-line clamp, `hyphens: auto` (index.html has `lang="de"`), font size in `cqw` via `container-type: inline-size` on `.pad-wrap`.
 - DJ layout: `.board-rows` sets `--pad-w: clamp(140px, 14vw, 190px)`; `.board-row` is `flex-wrap: wrap` and `.pad-wrap` has that fixed width with `aspect-ratio: 3/2`. **Never give pads `flex: 1`** – equal width is a requirement, not a detail. Empty rows are hidden in the DJ view. On iPad landscape ~6 pads per line.
+- `.pad3d--paused` (on top of `--active`) switches the pulse off; paused pads stay marked active because the sound will resume.
 - The arrangement editor uses the same `--pad-w`, so its wrapping matches the real board. It is rendered full-width (outside the `max-w-4xl` column) for that reason.
 - In a team-filtered editor view the drop index refers to the **visible** pads; `realIndex()` maps it back to the real position so hidden pads of the other team are not reordered. Tested – don't simplify this away.
 - Drag & drop uses **pointer events**, not the HTML5 drag API, because the latter does not work on iOS Safari. Hit-testing compares the pointer against each tile's rect (`y` inside the tile's line and `x` past its centre, or the whole line above) so it also works for wrapped rows. Tiles are focusable and arrow keys move them – keep that fallback.
@@ -119,9 +124,9 @@ backup – keep export/import backwards compatible.
 - To test caching behaviour: build twice into two folders, serve them with a tiny node server that reads the current folder from a file, swap the file, and drive Chrome (see scratchpad `swtest/`). Waiting 1.5 s after a reload is too short – the worker needs a few seconds to install.
 
 ### Testing changes
-There are no unit tests. Verify in a browser: `npm run dev -- --no-open`, then drive Chrome headless with playwright-core (`channel: 'chrome'`) – import a test file, set a cue, play from the DJ view, reload, check `console` errors. Test tones can be generated with Python's `wave` module and converted with `afconvert`.
+**`npm test`** runs `tests/run.mjs`: it starts Vite on port 3100 (or uses `BASE_URL`), generates WAV test tones itself (`tests/fixtures.mjs`, no ffmpeg needed), drives the installed Chrome headless via `playwright-core` (`channel: 'chrome'`, no browser download) and checks migration, team picker, import, playback modes with real timing, pause/resume, per-clip gain, clip reorder/move, drag & drop, export/import. Exit code 1 on failure. Run it before every commit that touches playback or the data model; extend it when adding features. Real Safari can be tested with a tiny node server + `open -a Safari` (see the transcode gotcha above).
 
 ## Roadmap
-- **Done (Phase 1):** soundboard, cue editor, local import to IndexedDB, bundle export/import, PWA shell.
-- **Next:** Tauri desktop build reading a folder from disk (swap `audioStore` behind the same interface), group editing (rename/colour/add), clip reordering, preloading for lower start latency, keyboard shortcuts per pad.
-- **Later:** waveform in DJ view, timers (auto-stop after X s), Spotify (needs Premium + online).
+- **Done:** soundboard, drag & drop rows, two teams, cue editor with level meter, per-clip volume, playback modes (single/sequence/shuffle), pause/resume, wake lock, video import with audio extraction, bundle export/import, PWA with self-updating shell, e2e tests.
+- **Next:** start latency (~0.2–1 s; preload short clips via Web Audio instead of `html5: true`), keyboard shortcuts per pad, countdown for timeouts, fade-in/crossfade, configurable teams, undo for delete.
+- **Later:** Tauri desktop build reading a folder from disk (swap `audioStore` behind the same interface), zoom in the cue editor, Spotify (needs Premium + online).

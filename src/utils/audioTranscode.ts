@@ -1,5 +1,3 @@
-import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
-
 /**
  * Extrahiert die Tonspur einer Mediendatei und speichert sie kompakt als AAC in
  * einem M4A-Container (mit Sample-Index -> exaktes Anspringen von Cue-Points).
@@ -97,6 +95,8 @@ export async function transcodeToAac(input: Blob): Promise<TranscodeResult | nul
     buffer = await resample(buffer, sampleRate);
   }
 
+  // Der Muxer wird nur beim Import gebraucht - erst hier laden, nicht beim App-Start
+  const { ArrayBufferTarget, Muxer } = await import('mp4-muxer');
   const muxer = new Muxer({
     target: new ArrayBufferTarget(),
     audio: { codec: 'aac', sampleRate, numberOfChannels: channels },

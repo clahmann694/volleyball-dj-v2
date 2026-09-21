@@ -1,4 +1,3 @@
-import JSZip from 'jszip';
 import { allPads, BoardConfig } from '../types';
 import { deleteFile, getFile, listFileIds, putFile } from '../storage/audioStore';
 import { migrateBoard } from '../storage/boardStore';
@@ -8,6 +7,8 @@ import { migrateBoard } from '../storage/boardStore';
  * Damit wandert die komplette Einrichtung vom Mac aufs iPad - oder ins Backup.
  */
 export async function createBundle(board: BoardConfig): Promise<Blob> {
+  // JSZip wird nur im Dev-Modus gebraucht - erst hier laden, nicht beim App-Start
+  const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
   zip.file('board.json', JSON.stringify(board, null, 2));
   const folder = zip.folder('files')!;
@@ -22,6 +23,7 @@ export async function createBundle(board: BoardConfig): Promise<Blob> {
 }
 
 export async function readBundle(file: Blob): Promise<BoardConfig> {
+  const { default: JSZip } = await import('jszip');
   const zip = await JSZip.loadAsync(file);
   const json = await zip.file('board.json')?.async('string');
   if (!json) throw new Error('Kein board.json im Bundle gefunden.');

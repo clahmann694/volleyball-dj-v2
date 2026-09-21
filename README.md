@@ -9,7 +9,9 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 **DJ-Ansicht** (im Spiel)
 - Gleich große 3D-Tasten in sechs Farben (Rot, Orange, Gelb, Grün, Blau, Lila), frei beschriftbar – „Block", „Ass", „krasser Angriff"; passen mehr Tasten in eine Zeile, als nebeneinander Platz haben, wird umgebrochen
 - Tippen spielt den Sound, nochmal tippen stoppt. Tasten mit mehreren Sounds wählen zufällig – oder du wählst gezielt in der Seitenleiste.
-- Transportleiste: was läuft, Restzeit, **Fade out**, großer **STOP**-Button (am Mac auch Leertaste), Lautstärke
+- Je Taste einstellbar: **Einzeln** (ein Sound, dann Stille), **Der Reihe nach** (Playlist, läuft endlos) oder **Zufällig endlos** (nie zweimal derselbe hintereinander)
+- Transportleiste: was läuft, Restzeit, **Pause/Weiter**, **Fade out**, großer **STOP**-Button (am Mac auch Leertaste), Lautstärke
+- Der Bildschirm bleibt im Spielbetrieb an
 
 **Dev-Ansicht** (Einrichtung)
 - Tasten anlegen, beschriften, Farbe wählen, löschen
@@ -17,6 +19,8 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 - Anordnung mit der Maus: Tasten an ihren Platz ziehen, in eine andere Zeile oder in eine neue
 - Audiodateien per Datei-Dialog oder Drag & Drop hinzufügen (MP3, M4A, WAV, …)
 - **Cue-Points** setzen: Wellenform, Klick = Start, Shift-Klick = Ende, Marker ziehen, Vorschau
+- **Lautstärke je Sound** mit Pegelmessung und „Angleichen" – damit nicht jeder Song anders laut ist
+- Sounds innerhalb einer Taste sortieren oder in eine andere Taste verschieben
 - Komplette Einrichtung als `.vbdj`-Bundle exportieren/importieren (Buttons + Cue-Points + Audiodateien)
 
 ## Wo liegen die Sounds?
@@ -34,6 +38,7 @@ Im Browser des Geräts (IndexedDB) – **nicht** im Repo und **nicht** in der Cl
 npm install
 npm run dev          # http://localhost:3000
 npm run type-check
+npm test             # End-to-End-Tests (startet Vite auf Port 3100, braucht Google Chrome)
 npm run build        # Produktions-Build nach dist/
 ```
 
@@ -51,5 +56,6 @@ Details zur Architektur in [CLAUDE.md](CLAUDE.md).
 - [x] Cue-Point-Editor mit Wellenform
 - [x] Lokaler Import, Export/Import als Bundle, PWA
 - [ ] Native Mac-App (Tauri) mit direktem Ordnerzugriff
-- [ ] Sounds innerhalb einer Taste sortieren, Tastenkürzel pro Taste
+- [x] Pause/Weiter, Playlist-Modi, Lautstärke je Sound, Sounds sortieren
+- [ ] Startverzögerung verkürzen, Tastenkürzel pro Taste
 - [ ] Timer (automatischer Stopp nach X Sekunden)
