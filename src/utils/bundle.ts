@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { BoardConfig } from '../types';
+import { allPads, BoardConfig } from '../types';
 import { deleteFile, getFile, listFileIds, putFile } from '../storage/audioStore';
 import { migrateBoard } from '../storage/boardStore';
 
@@ -11,7 +11,7 @@ export async function createBundle(board: BoardConfig): Promise<Blob> {
   const zip = new JSZip();
   zip.file('board.json', JSON.stringify(board, null, 2));
   const folder = zip.folder('files')!;
-  for (const pad of board.pads) {
+  for (const pad of allPads(board)) {
     for (const clip of pad.clips) {
       const stored = await getFile(clip.fileId);
       if (stored) folder.file(clip.fileId, stored.blob);
@@ -28,7 +28,7 @@ export async function readBundle(file: Blob): Promise<BoardConfig> {
   const board = migrateBoard(JSON.parse(json));
   if (!board) throw new Error('Unbekanntes Bundle-Format.');
 
-  for (const pad of board.pads) {
+  for (const pad of allPads(board)) {
     for (const clip of pad.clips) {
       const entry = zip.file(`files/${clip.fileId}`);
       if (!entry) continue;
@@ -47,7 +47,7 @@ export async function readBundle(file: Blob): Promise<BoardConfig> {
 /** Loescht alle Audiodateien, auf die kein Clip mehr zeigt. */
 export async function deleteOrphanFiles(board: BoardConfig): Promise<number> {
   const referenced = new Set<string>();
-  for (const p of board.pads) for (const c of p.clips) referenced.add(c.fileId);
+  for (const p of allPads(board)) for (const c of p.clips) referenced.add(c.fileId);
   const ids = await listFileIds();
   let removed = 0;
   for (const id of ids) {

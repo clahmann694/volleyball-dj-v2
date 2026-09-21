@@ -1,18 +1,27 @@
 import { useBoard } from '../../contexts/BoardContext';
 import { SoundPad } from './SoundPad';
 
-/** Flaches Raster aller Buttons in Lesereihenfolge. */
+/**
+ * Zeilen-Layout: jede Zeile teilt ihre Breite gleichmaessig unter ihren Buttons auf.
+ * Eine Zeile mit einem Button ergibt einen Button ueber die volle Breite.
+ * Leere Zeilen werden im Spiel nicht angezeigt.
+ */
 export function SoundBoard({ onOpenPanel }: { onOpenPanel: (padId: string) => void }) {
   const { board } = useBoard();
+  const rows = board.rows.filter(r => r.pads.length > 0);
 
-  if (board.pads.length === 0) {
+  if (rows.length === 0) {
     return <p className="text-vsg-ice/70 text-sm p-4">Keine Buttons – in der Dev-Ansicht anlegen.</p>;
   }
 
   return (
-    <div className="board-grid grid gap-3 grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
-      {board.pads.map(pad => (
-        <SoundPad key={pad.id} pad={pad} onOpenPanel={onOpenPanel} />
+    <div className="board-rows h-full flex flex-col gap-2">
+      {rows.map(row => (
+        <div key={row.id} className="board-row flex gap-2">
+          {row.pads.map(pad => (
+            <SoundPad key={pad.id} pad={pad} onOpenPanel={onOpenPanel} />
+          ))}
+        </div>
       ))}
     </div>
   );

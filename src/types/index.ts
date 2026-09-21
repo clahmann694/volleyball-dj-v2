@@ -28,10 +28,21 @@ export interface SoundPad {
   clips: SoundClip[];
 }
 
-/** Das Board ist ein flaches Raster von Buttons in Lesereihenfolge. */
-export interface BoardConfig {
-  version: 2;
+/** Eine Zeile des Dashboards; ihre Buttons teilen sich die Breite gleichmaessig. */
+export interface BoardRow {
+  id: string;
   pads: SoundPad[];
+}
+
+/** Das Board besteht aus frei belegbaren Zeilen (1 Button = volle Breite, 4 Buttons = Viertel). */
+export interface BoardConfig {
+  version: 3;
+  rows: BoardRow[];
+}
+
+/** Alle Buttons in Lesereihenfolge */
+export function allPads(board: BoardConfig): SoundPad[] {
+  return board.rows.flatMap(r => r.pads);
 }
 
 export type ViewMode = 'dj' | 'dev';

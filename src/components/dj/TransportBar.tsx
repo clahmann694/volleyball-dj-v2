@@ -15,7 +15,7 @@ export function TransportBar() {
     return () => clearTimeout(t);
   }, [error, clearError]);
 
-  const pad = playing ? padIndex.get(playing.padId) : undefined;
+  const pad = playing ? padIndex.get(playing.padId)?.pad : undefined;
   const start = cue?.start ?? 0;
   const end = cue?.end ?? fileDuration ?? null;
   const total = end != null && end > start ? end - start : null;

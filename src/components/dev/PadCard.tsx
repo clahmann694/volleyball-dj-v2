@@ -6,8 +6,11 @@ import { ColorSwatches } from './ColorSwatches';
 
 interface Props {
   pad: SoundPad;
+  rowIndex: number;
+  rowCount: number;
+  /** Position innerhalb der Zeile */
   index: number;
-  total: number;
+  padsInRow: number;
   onEditClip: (clipId: string) => void;
 }
 
@@ -16,7 +19,7 @@ interface Props {
 const ACCEPT = 'audio/*,video/mp4,video/quicktime,video/x-m4v,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff,.mp4,.m4v,.mov';
 
 /** Ein Button in der Dev-Ansicht: Farbe, Name, Position, Sounds. */
-export function PadCard({ pad, index, total, onEditClip }: Props) {
+export function PadCard({ pad, rowIndex, rowCount, index, padsInRow, onEditClip }: Props) {
   const { updatePad, movePad, deletePad, addClipsFromFiles, busy } = useBoard();
   const [dragOver, setDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -77,9 +80,11 @@ export function PadCard({ pad, index, total, onEditClip }: Props) {
         />
         <ColorSwatches value={pad.color} onChange={hex => updatePad(pad.id, { color: hex })} />
         <div className="flex items-center gap-1 ml-auto">
-          <button onClick={() => movePad(pad.id, -1)} disabled={index === 0} title="Nach vorne" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">←</button>
-          <button onClick={() => movePad(pad.id, 1)} disabled={index === total - 1} title="Nach hinten" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">→</button>
-          <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400">🗑</button>
+          <button onClick={() => movePad(pad.id, 'left')} disabled={index === 0} title="In der Zeile nach links" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">←</button>
+          <button onClick={() => movePad(pad.id, 'right')} disabled={index === padsInRow - 1} title="In der Zeile nach rechts" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">→</button>
+          <button onClick={() => movePad(pad.id, 'up')} disabled={rowIndex === 0} title="In die Zeile darüber" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">↑</button>
+          <button onClick={() => movePad(pad.id, 'down')} title={rowIndex === rowCount - 1 ? 'In eine neue Zeile darunter' : 'In die Zeile darunter'} className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20">↓</button>
+          <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400 ml-1">🗑</button>
         </div>
       </div>
 

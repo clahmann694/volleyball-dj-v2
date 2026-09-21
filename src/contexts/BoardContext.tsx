@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { BoardConfig, SoundClip, SoundPad } from '../types';
+import { allPads, BoardConfig, BoardRow, SoundClip, SoundPad } from '../types';
 import { loadBoard, markChanged, markExported, saveBoard } from '../storage/boardStore';
 import { deleteFile, putFile, requestPersistence } from '../storage/audioStore';
 import { DEFAULT_BOARD } from '../config/defaultBoard';
@@ -9,7 +9,7 @@ import { shouldCompress, transcodeToAac } from '../utils/audioTranscode';
 import { createBundle, deleteOrphanFiles, readBundle } from '../utils/bundle';
 
 /**
- * Verwaltet das Board (flache Liste von Pads mit Clips).
+ * Verwaltet das Board: Zeilen -> Pads -> Clips.
  * Die Konfiguration liegt in localStorage, die Audiodateien in IndexedDB.
  */
 
@@ -18,15 +18,28 @@ export interface ClipRef {
   pad: SoundPad;
 }
 
+export interface PadPosition {
+  pad: SoundPad;
+  row: BoardRow;
+  rowIndex: number;
+  index: number;
+}
+
+export type MoveDirection = 'left' | 'right' | 'up' | 'down';
+
 interface BoardContextType {
   board: BoardConfig;
-  padIndex: Map<string, SoundPad>;
+  padIndex: Map<string, PadPosition>;
   clipIndex: Map<string, ClipRef>;
   busy: boolean;
-  addPad: (name: string, color: string) => void;
+  addRow: () => void;
+  /** Loescht eine Zeile; ihre Pads wandern in die vorherige (oder naechste) Zeile */
+  deleteRow: (rowId: string) => void;
+  moveRow: (rowId: string, delta: number) => void;
+  addPad: (rowId: string, name: string, color: string) => void;
   updatePad: (padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color'>>) => void;
-  /** Verschiebt ein Pad um `delta` Positionen in der Lesereihenfolge */
-  movePad: (padId: string, delta: number) => void;
+  /** left/right: innerhalb der Zeile; up/down: ans Ende der Nachbarzeile (down in letzter Zeile = neue Zeile) */
+  movePad: (padId: string, direction: MoveDirection) => void;
   deletePad: (padId: string) => Promise<void>;
   addClipsFromFiles: (padId: string, files: Iterable<File>) => Promise<number>;
   updateClip: (clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration'>>) => void;
@@ -39,7 +52,18 @@ interface BoardContextType {
 const BoardCtx = createContext<BoardContextType | undefined>(undefined);
 
 function mapPads(board: BoardConfig, fn: (pad: SoundPad) => SoundPad | null): BoardConfig {
-  return { ...board, pads: board.pads.map(fn).filter((p): p is SoundPad => p !== null) };
+  return {
+    ...board,
+    rows: board.rows.map(row => ({ ...row, pads: row.pads.map(fn).filter((p): p is SoundPad => p !== null) })),
+  };
+}
+
+function locate(board: BoardConfig, padId: string): { rowIndex: number; index: number } | null {
+  for (let r = 0; r < board.rows.length; r++) {
+    const i = board.rows[r].pads.findIndex(p => p.id === padId);
+    if (i >= 0) return { rowIndex: r, index: i };
+  }
+  return null;
 }
 
 export function BoardProvider({ children }: { children: React.ReactNode }) {
@@ -55,46 +79,99 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, [board]);
 
   const { padIndex, clipIndex } = useMemo(() => {
-    const padIndex = new Map<string, SoundPad>();
+    const padIndex = new Map<string, PadPosition>();
     const clipIndex = new Map<string, ClipRef>();
-    for (const pad of board.pads) {
-      padIndex.set(pad.id, pad);
-      for (const clip of pad.clips) clipIndex.set(clip.id, { clip, pad });
-    }
+    board.rows.forEach((row, rowIndex) => {
+      row.pads.forEach((pad, index) => {
+        padIndex.set(pad.id, { pad, row, rowIndex, index });
+        for (const clip of pad.clips) clipIndex.set(clip.id, { clip, pad });
+      });
+    });
     return { padIndex, clipIndex };
   }, [board]);
 
-  const addPad = useCallback((name: string, color: string) => {
-    setBoard(b => ({ ...b, pads: [...b.pads, { id: newId(), name: name.trim() || 'Neuer Button', color, clips: [] }] }));
+  // ----- Zeilen -----
+  const addRow = useCallback(() => {
+    setBoard(b => ({ ...b, rows: [...b.rows, { id: newId(), pads: [] }] }));
+  }, []);
+
+  const deleteRow = useCallback((rowId: string) => {
+    setBoard(b => {
+      const idx = b.rows.findIndex(r => r.id === rowId);
+      if (idx < 0 || b.rows.length === 1) return b;
+      const rows = b.rows.map(r => ({ ...r, pads: [...r.pads] }));
+      const [removed] = rows.splice(idx, 1);
+      const target = rows[Math.max(0, idx - 1)];
+      target.pads.push(...removed.pads);
+      return { ...b, rows };
+    });
+  }, []);
+
+  const moveRow = useCallback((rowId: string, delta: number) => {
+    setBoard(b => {
+      const from = b.rows.findIndex(r => r.id === rowId);
+      const to = from + delta;
+      if (from < 0 || to < 0 || to >= b.rows.length) return b;
+      const rows = [...b.rows];
+      const [row] = rows.splice(from, 1);
+      rows.splice(to, 0, row);
+      return { ...b, rows };
+    });
+  }, []);
+
+  // ----- Pads -----
+  const addPad = useCallback((rowId: string, name: string, color: string) => {
+    setBoard(b => ({
+      ...b,
+      rows: b.rows.map(r =>
+        r.id === rowId ? { ...r, pads: [...r.pads, { id: newId(), name: name.trim() || 'Neuer Button', color, clips: [] }] } : r
+      ),
+    }));
   }, []);
 
   const updatePad = useCallback((padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color'>>) => {
     setBoard(b => mapPads(b, pad => (pad.id === padId ? { ...pad, ...patch } : pad)));
   }, []);
 
-  const movePad = useCallback((padId: string, delta: number) => {
+  const movePad = useCallback((padId: string, direction: MoveDirection) => {
     setBoard(b => {
-      const from = b.pads.findIndex(p => p.id === padId);
-      if (from < 0) return b;
-      const to = Math.max(0, Math.min(b.pads.length - 1, from + delta));
-      if (to === from) return b;
-      const pads = [...b.pads];
-      const [moved] = pads.splice(from, 1);
-      pads.splice(to, 0, moved);
-      return { ...b, pads };
+      const pos = locate(b, padId);
+      if (!pos) return b;
+      const rows = b.rows.map(r => ({ ...r, pads: [...r.pads] }));
+      const row = rows[pos.rowIndex];
+
+      if (direction === 'left' || direction === 'right') {
+        const to = pos.index + (direction === 'left' ? -1 : 1);
+        if (to < 0 || to >= row.pads.length) return b;
+        [row.pads[pos.index], row.pads[to]] = [row.pads[to], row.pads[pos.index]];
+        return { ...b, rows };
+      }
+
+      const [pad] = row.pads.splice(pos.index, 1);
+      if (direction === 'up') {
+        if (pos.rowIndex === 0) return b;
+        rows[pos.rowIndex - 1].pads.push(pad);
+      } else {
+        if (pos.rowIndex === rows.length - 1) rows.push({ id: newId(), pads: [pad] });
+        else rows[pos.rowIndex + 1].pads.push(pad);
+      }
+      // Eine durch den Umzug leer gewordene Zeile verschwindet (ausser es ist die einzige)
+      const cleaned = rows.filter((r, i) => !(i === pos.rowIndex && r.pads.length === 0) || rows.length === 1);
+      return { ...b, rows: cleaned };
     });
   }, []);
 
   const deletePad = useCallback(
     async (padId: string) => {
-      const pad = padIndex.get(padId);
-      if (!pad) return;
+      const pos = padIndex.get(padId);
+      if (!pos) return;
       setBoard(b => mapPads(b, p => (p.id === padId ? null : p)));
-      for (const clip of pad.clips) await deleteFile(clip.fileId).catch(() => undefined);
+      for (const clip of pos.pad.clips) await deleteFile(clip.fileId).catch(() => undefined);
     },
     [padIndex]
   );
 
+  // ----- Clips -----
   const addClipsFromFiles = useCallback(async (padId: string, files: Iterable<File>) => {
     setBusy(true);
     try {
@@ -163,6 +240,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     [clipIndex]
   );
 
+  // ----- Bundle -----
   const exportBoard = useCallback(async () => {
     const blob = await createBundle(board);
     markExported();
@@ -192,8 +270,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<BoardContextType>(
-    () => ({ board, padIndex, clipIndex, busy, addPad, updatePad, movePad, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard }),
-    [board, padIndex, clipIndex, busy, addPad, updatePad, movePad, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard]
+    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, updatePad, movePad, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard }),
+    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, updatePad, movePad, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard]
   );
 
   return <BoardCtx.Provider value={value}>{children}</BoardCtx.Provider>;
@@ -203,4 +281,10 @@ export function useBoard(): BoardContextType {
   const ctx = useContext(BoardCtx);
   if (!ctx) throw new Error('useBoard muss innerhalb von BoardProvider verwendet werden');
   return ctx;
+}
+
+/** Hilfsfunktion fuer Komponenten, die nur die Pads brauchen */
+export function useAllPads(): SoundPad[] {
+  const { board } = useBoard();
+  return useMemo(() => allPads(board), [board]);
 }

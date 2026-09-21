@@ -1,5 +1,6 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useBoard } from '../../contexts/BoardContext';
+import { allPads } from '../../types';
 import { storageInfo } from '../../storage/audioStore';
 import { getLastChange, getLastExport } from '../../storage/boardStore';
 import { downloadBlob } from '../../utils/bundle';
@@ -13,7 +14,7 @@ export function BundleControls() {
   const [info, setInfo] = useState<{ usage: number; quota: number; persisted: boolean | null } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const clipCount = board.pads.reduce((n, p) => n + p.clips.length, 0);
+  const clipCount = allPads(board).reduce((n, p) => n + p.clips.length, 0);
   // Sicherungsstatus: geaendert seit letztem Export?
   const lastExport = getLastExport();
   const lastChange = getLastChange();

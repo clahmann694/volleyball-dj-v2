@@ -78,12 +78,12 @@ button {
     top: 8%;
     bottom: 20%;
     border-radius: 11px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display: grid;
+    place-content: center;
     gap: 2px;
-    padding: 6% 8%;
+    /* Vertikal in px: Prozent-Padding bezieht sich auch oben/unten auf die BREITE -
+       bei einem Button ueber die volle Zeile wuerde es das Label auf 0 px druecken */
+    padding: 6px 8%;
     overflow: hidden;
     background: linear-gradient(
       180deg,
@@ -117,8 +117,8 @@ button {
     position: relative;
     color: var(--t);
     font-weight: 800;
-    font-size: clamp(0.85rem, 1.7vw, 1.2rem);
-    font-size: clamp(0.85rem, 9.5cqw, 1.2rem);
+    font-size: clamp(0.85rem, 1.7vw, 1.5rem);
+    font-size: clamp(0.85rem, 9.5cqw, 1.5rem);
     line-height: 1.12;
     text-align: center;
     letter-spacing: -0.01em;
@@ -201,10 +201,21 @@ button {
   }
 }
 
+/* Zeilen teilen sich die Hoehe; bei vielen Zeilen wird gescrollt */
+.board-row {
+  flex: 1 1 0;
+  min-height: 84px;
+  max-height: 190px;
+}
+
 /* Niedrige Fenster (iPad quer, kleine Laptops): engeres Raster */
 @media (max-height: 820px) {
-  .board-grid {
+  .board-rows,
+  .board-row {
     gap: 0.5rem;
+  }
+  .board-row {
+    min-height: 72px;
   }
 }
 

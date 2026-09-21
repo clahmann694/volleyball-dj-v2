@@ -22,32 +22,14 @@ export function padTextColor(hex: string): string {
 const pad = (id: string, name: string, color: string): SoundPad => ({ id, name, color, clips: [] });
 const C = Object.fromEntries(PAD_COLORS.map(c => [c.id, c.hex])) as Record<(typeof PAD_COLORS)[number]['id'], string>;
 
-// Startbelegung: die Buttons aus der V1, ohne Audiodateien (werden importiert)
+// Startbelegung: die Buttons aus der V1 (ohne Audiodateien), eine Zeile je frueherer Kategorie
 export const DEFAULT_BOARD: BoardConfig = {
-  version: 2,
-  pads: [
-    pad('ace', 'Ass!', C.red),
-    pad('block', 'Block!', C.red),
-    pad('kill', 'Angriff!', C.red),
-    pad('point', 'Punkt!', C.red),
-    pad('set-point', 'Satzball', C.red),
-    pad('lets-go', "Los geht's!", C.orange),
-    pad('air-horn', 'Tröte', C.orange),
-    pad('drum-roll', 'Trommelwirbel', C.orange),
-    pad('crowd-cheer', 'Jubel', C.orange),
-    pad('siren', 'Sirene', C.orange),
-    pad('timeout-beat', 'Timeout-Beat', C.green),
-    pad('hype-track', 'Hype-Track', C.green),
-    pad('walk-on', 'Einlauf', C.green),
-    pad('halftime', 'Halbzeit', C.green),
-    pad('buzzer', 'Buzzer', C.purple),
-    pad('fail', 'Wah Wah', C.purple),
-    pad('applause', 'Applaus', C.purple),
-    pad('defense', 'Abwehr!', C.purple),
-    pad('boo', 'Buh!', C.purple),
-    pad('whistle', 'Pfiff', C.blue),
-    pad('substitution', 'Wechsel', C.blue),
-    pad('challenge', 'Challenge', C.blue),
-    pad('game-start', 'Spielstart', C.blue),
+  version: 3,
+  rows: [
+    { id: 'row-scoring', pads: [pad('ace', 'Ass!', C.red), pad('block', 'Block!', C.red), pad('kill', 'Angriff!', C.red), pad('point', 'Punkt!', C.red), pad('set-point', 'Satzball', C.red)] },
+    { id: 'row-momentum', pads: [pad('lets-go', "Los geht's!", C.orange), pad('air-horn', 'Tröte', C.orange), pad('drum-roll', 'Trommelwirbel', C.orange), pad('crowd-cheer', 'Jubel', C.orange), pad('siren', 'Sirene', C.orange)] },
+    { id: 'row-timeouts', pads: [pad('timeout-beat', 'Timeout-Beat', C.green), pad('hype-track', 'Hype-Track', C.green), pad('walk-on', 'Einlauf', C.green), pad('halftime', 'Halbzeit', C.green)] },
+    { id: 'row-fun', pads: [pad('buzzer', 'Buzzer', C.purple), pad('fail', 'Wah Wah', C.purple), pad('applause', 'Applaus', C.purple), pad('defense', 'Abwehr!', C.purple), pad('boo', 'Buh!', C.purple)] },
+    { id: 'row-events', pads: [pad('whistle', 'Pfiff', C.blue), pad('substitution', 'Wechsel', C.blue), pad('challenge', 'Challenge', C.blue), pad('game-start', 'Spielstart', C.blue)] },
   ],
 };

@@ -1,12 +1,25 @@
 import { BoardConfig, SoundClip, SoundPad } from '../types';
 import { DEFAULT_BOARD, PAD_COLORS } from '../config/defaultBoard';
+import { newId } from '../utils/id';
 
 const KEY = 'vbdj-v2-board';
 
-// Version 1 hatte Gruppen (Scoring, Momentum, ...) mit eigener Farbe
+// Version 1 hatte Gruppen (Scoring, Momentum, ...) mit eigener Farbe,
+// Version 2 eine flache Liste von Pads mit eigener Farbe.
 interface LegacyPad { id: string; name: string; clips?: SoundClip[] }
 interface LegacyGroup { id: string; color?: string; pads?: LegacyPad[] }
-interface LegacyBoard { version: 1; groups: LegacyGroup[] }
+interface LegacyBoardV1 { version: 1; groups: LegacyGroup[] }
+interface LegacyBoardV2 { version: 2; pads: SoundPad[] }
+
+/** Spalten des iPad-Rasters vor v3 - so bleibt die gewohnte Anordnung erhalten */
+const V2_ROW_LENGTH = 6;
+
+function rowsFromFlat(pads: SoundPad[]): BoardConfig {
+  const rows = [];
+  for (let i = 0; i < pads.length; i += V2_ROW_LENGTH) rows.push({ id: newId(), pads: pads.slice(i, i + V2_ROW_LENGTH) });
+  if (rows.length === 0) rows.push({ id: newId(), pads: [] });
+  return { version: 3, rows };
+}
 
 const LEGACY_GROUP_COLOR: Record<string, string> = {
   scoring: PAD_COLORS[0].hex,
@@ -16,18 +29,19 @@ const LEGACY_GROUP_COLOR: Record<string, string> = {
   events: PAD_COLORS[4].hex,
 };
 
-/** Akzeptiert v1 und v2, liefert immer ein v2-Board oder null. */
+/** Akzeptiert v1, v2 und v3, liefert immer ein v3-Board oder null. */
 export function migrateBoard(raw: unknown): BoardConfig | null {
   if (!raw || typeof raw !== 'object') return null;
   const b = raw as { version?: number };
-  if (b.version === 2 && Array.isArray((b as BoardConfig).pads)) return b as BoardConfig;
-  if (b.version === 1 && Array.isArray((b as LegacyBoard).groups)) {
+  if (b.version === 3 && Array.isArray((b as BoardConfig).rows)) return b as BoardConfig;
+  if (b.version === 2 && Array.isArray((b as LegacyBoardV2).pads)) return rowsFromFlat((b as LegacyBoardV2).pads);
+  if (b.version === 1 && Array.isArray((b as LegacyBoardV1).groups)) {
     const pads: SoundPad[] = [];
-    for (const g of (b as LegacyBoard).groups) {
+    for (const g of (b as LegacyBoardV1).groups) {
       const color = LEGACY_GROUP_COLOR[g.id] ?? g.color ?? PAD_COLORS[4].hex;
       for (const p of g.pads ?? []) pads.push({ id: p.id, name: p.name, color, clips: p.clips ?? [] });
     }
-    return { version: 2, pads };
+    return rowsFromFlat(pads);
   }
   return null;
 }

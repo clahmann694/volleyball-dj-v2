@@ -29,7 +29,7 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
   };
 
   return (
-    <div className="pad-wrap relative aspect-[3/2]" style={style}>
+    <div className="pad-wrap relative flex-1 min-w-0 h-full" style={style}>
       <button
         onClick={handleClick}
         disabled={!hasClips}
