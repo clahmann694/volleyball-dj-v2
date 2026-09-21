@@ -1,7 +1,8 @@
 import { CSSProperties, PointerEvent as ReactPointerEvent, useCallback, useRef, useState } from 'react';
-import { SoundPad } from '../../types';
+import { BoardRow, padsForTeam, SoundPad, TeamId } from '../../types';
 import { NEW_ROW, useBoard } from '../../contexts/BoardContext';
 import { padTextColor } from '../../config/defaultBoard';
+import { TEAMS } from '../../config/teams';
 
 /**
  * Anordnung des Dashboards: Buttons werden mit der Maus (oder dem Finger)
@@ -30,7 +31,21 @@ interface Target {
   index: number;
 }
 
-export function LayoutEditor() {
+/**
+ * Rechnet eine Einfuegestelle der SICHTBAREN Liste in die echte Position um.
+ * Noetig, weil in einer Mannschafts-Ansicht Buttons der anderen ausgeblendet sind.
+ */
+function realIndex(row: BoardRow, visibleIndex: number, team: TeamId | null): number {
+  if (!team) return visibleIndex;
+  let seen = 0;
+  for (let i = 0; i < row.pads.length; i++) {
+    if (seen === visibleIndex) return i;
+    if (row.pads[i].teams.includes(team)) seen++;
+  }
+  return row.pads.length;
+}
+
+export function LayoutEditor({ teamFilter = null }: { teamFilter?: TeamId | null }) {
   const { board, movePadTo, movePad, moveRow } = useBoard();
   const [drag, setDrag] = useState<DragState | null>(null);
   const [target, setTarget] = useState<Target | null>(null);
@@ -87,11 +102,16 @@ export function LayoutEditor() {
   };
 
   const endDrag = () => {
-    if (drag?.moved && target) movePadTo(drag.padId, target.rowId, target.index);
+    if (drag?.moved && target) {
+      const row = board.rows.find(r => r.id === target.rowId);
+      const index = row ? realIndex(row, target.index, teamFilter) : target.index;
+      movePadTo(drag.padId, target.rowId, index);
+    }
     setDrag(null);
     setTarget(null);
   };
 
+  const visible = (row: BoardRow) => padsForTeam(row, teamFilter);
   const dragged = drag ? board.rows.flatMap(r => r.pads).find(p => p.id === drag.padId) : undefined;
 
   return (
@@ -113,18 +133,23 @@ export function LayoutEditor() {
                 target?.rowId === row.id ? 'border-vsg-cyan bg-vsg-cyan/10' : 'border-white/10'
               }`}
             >
-              {row.pads.length === 0 && <span className="self-center text-xs text-white/35 px-2">leere Zeile – wird im Spiel ausgeblendet</span>}
-              {row.pads.map((pad, i) => (
+              {visible(row).length === 0 && (
+                <span className="self-center text-xs text-white/35 px-2">
+                  {teamFilter ? 'in dieser Ansicht leer' : 'leere Zeile – wird im Spiel ausgeblendet'}
+                </span>
+              )}
+              {visible(row).map((pad, i) => (
                 <Tile
                   key={pad.id}
                   pad={pad}
+                  showTeams={!teamFilter}
                   dragging={drag?.moved === true && drag.padId === pad.id}
                   insertBefore={target?.rowId === row.id && target.index === i}
                   onPointerDown={onPointerDown(pad.id)}
                   onKeyMove={dir => movePad(pad.id, dir)}
                 />
               ))}
-              {target?.rowId === row.id && target.index >= row.pads.length && <Caret />}
+              {target?.rowId === row.id && target.index >= visible(row).length && <Caret />}
             </div>
           </div>
         ))}
@@ -170,14 +195,17 @@ function Caret() {
 
 interface TileProps {
   pad: SoundPad;
+  showTeams: boolean;
   dragging: boolean;
   insertBefore: boolean;
   onPointerDown: (e: ReactPointerEvent<HTMLElement>) => void;
   onKeyMove: (dir: 'left' | 'right' | 'up' | 'down') => void;
 }
 
-function Tile({ pad, dragging, insertBefore, onPointerDown, onKeyMove }: TileProps) {
+function Tile({ pad, showTeams, dragging, insertBefore, onPointerDown, onKeyMove }: TileProps) {
   const style = { background: pad.color, color: padTextColor(pad.color) } as CSSProperties;
+  // Kuerzel der Mannschaften, damit man in der Gesamtansicht die Zuordnung sieht
+  const badge = TEAMS.filter(t => pad.teams.includes(t.id)).map(t => t.short).join('');
   return (
     <>
       {insertBefore && <Caret />}
@@ -193,13 +221,21 @@ function Tile({ pad, dragging, insertBefore, onPointerDown, onKeyMove }: TilePro
           }
         }}
         title={`${pad.name} – ziehen oder mit den Pfeiltasten verschieben`}
-        className={`pad-tile rounded-lg flex flex-col items-center justify-center px-2 text-center cursor-grab active:cursor-grabbing select-none touch-none ${
+        className={`pad-tile relative rounded-lg flex flex-col items-center justify-center px-2 text-center cursor-grab active:cursor-grabbing select-none touch-none ${
           dragging ? 'opacity-25' : ''
         } ${pad.clips.length === 0 ? 'saturate-50 brightness-75' : ''}`}
         style={style}
       >
         <span className="text-sm font-bold leading-tight line-clamp-2">{pad.name}</span>
         {pad.clips.length > 0 && <span className="text-[10px] opacity-75">{pad.clips.length} Sound{pad.clips.length === 1 ? '' : 's'}</span>}
+        {showTeams && (
+          <span
+            className="absolute top-1 right-1 px-1 rounded bg-black/35 text-[10px] font-bold tracking-wider"
+            title={TEAMS.filter(t => pad.teams.includes(t.id)).map(t => t.name).join(' + ')}
+          >
+            {badge}
+          </span>
+        )}
       </button>
     </>
   );

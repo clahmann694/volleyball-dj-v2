@@ -11,9 +11,11 @@ The user speaks German; UI strings are German, code/comments/commits are English
 ### Key Concept: Soundboard with Cue Points
 The board is a list of **rows**, each holding any number of **pads** (buttons such as "Ass!", "Block!", "krasser Angriff"). **All pads are the same width** (`--pad-w`); a row never stretches its pads, and a row holding more pads than fit wraps onto the next line (explicitly requested 2026-09-21 – an earlier version stretched pads to fill the row and she rejected it). Rows are the explicit grouping: they force a line break. Arranged by **dragging with the mouse** in the Dev view (v2 flat grid and v1 categories are migrated in `boardStore.migrateBoard`, v2 → rows of 6). Each pad has one of six **colours** (`PAD_COLORS`) and 1..n **clips**; clicking a pad plays a random clip, clicking again stops it. Every clip has **cue points** (start/end in seconds) so any full-length song can be turned into a 25-second timeout clip without editing the file.
 
+**Teams:** the app is used for two teams (`TEAMS` in `src/config/teams.ts`: Herren 1, Damen 1). On every start it asks which one (`TeamPicker`); the DJ view then only shows pads assigned to that team, and rows that end up empty are hidden. A pad carries `teams: TeamId[]` and belongs to one or both – never zero (`setPadTeams` refuses an empty list). The choice is deliberately **asked on every load**, only pre-selected from `vbdj-v2-last-team`: going into a match with the wrong team's buttons is worse than one tap. Switching later: the team chip in the header.
+
 Two views:
 - **DJ view** – the dashboard used during games: 3D arcade-style pads (CSS only: `.pad3d` base + `.pad3d__cap`), side panel for multi-clip pads, transport bar (now playing, fade out, STOP, volume). Space = stop all.
-- **Dev view** – setup: a full-width **arrangement editor** (`LayoutEditor`) where pads are dragged into place, plus one settings card per pad (name, colour, sounds, cue) and `.vbdj` export/import. Per-pad arrow buttons were removed – she found them cumbersome.
+- **Dev view** – setup: a team switch (Beide / Herren 1 / Damen 1), a full-width **arrangement editor** (`LayoutEditor`) where pads are dragged into place, plus one settings card per pad (name, colour, team chips, sounds, cue) and `.vbdj` export/import. Per-pad arrow buttons were removed – she found them cumbersome.
 
 ## Development Commands
 
@@ -35,7 +37,8 @@ npm run type-check   # tsc --noEmit (strict, noUnusedLocals)
 
 ### Data flow
 ```
-BoardContext  (rows → pads → clips, persisted to localStorage; v1/v2 migrated on load)
+BoardContext  (rows → pads → clips, persisted to localStorage; v1–v3 migrated on load)
+TeamContext   (which team is playing; null → TeamPicker blocks the app)
      │  fileId
      ▼
 audioStore    (IndexedDB "vbdj-v2" / store "files": {id, blob, name, type})
@@ -47,16 +50,18 @@ AudioContext  (one Howl at a time; exclusive playback; sprite = [start, end-star
 ### Source layout
 ```
 src/
-├── types/index.ts            # CuePoint, SoundClip, SoundPad, BoardRow, BoardConfig (version 3), allPads()
+├── types/index.ts            # CuePoint, SoundClip, SoundPad, TeamId, BoardRow, BoardConfig (version 4), allPads(), padsForTeam()
+├── config/teams.ts           # TEAMS (Herren 1 / Damen 1), ALL_TEAM_IDS
 ├── config/defaultBoard.ts    # PAD_COLORS, padTextColor(), the 23 default pads (no audio)
 ├── storage/
 │   ├── audioStore.ts         # IndexedDB wrapper + persistence/quota helpers
-│   └── boardStore.ts         # localStorage load/save, migrateBoard (v1 groups / v2 flat → v3 rows), export-reminder keys
+│   └── boardStore.ts         # localStorage load/save, migrateBoard (v1 groups / v2 flat / v3 rows → v4 with teams), export-reminder keys
 ├── contexts/
 │   ├── AudioContext.tsx      # play(padId, clip, cueOverride?), stopAll, fadeOut, volume
 │   └── BoardContext.tsx      # rows (add/move/delete), pads (add/update/movePad left|right|up|down/delete), clips, export/import/reset
 ├── components/
-│   ├── Header.tsx            # title + DJ/Dev toggle
+│   ├── Header.tsx            # title, team chip (click = switch), DJ/Dev toggle
+│   ├── TeamPicker.tsx        # start question "Für wen legst du auf?"
 │   ├── dj/                   # DjView, SoundBoard (rows), SoundPad (3D button), ClipPanel, TransportBar
 │   └── dev/                  # DeveloperView, LayoutEditor (drag & drop), PadCard, ColorSwatches, ClipRow, CuePointEditor, Waveform, BundleControls
 ├── utils/                    # audioFormat (mime/ext, duration), audioTranscode (video → AAC/M4A), bundle (zip), waveform (peaks), formatTime, id
@@ -102,6 +107,7 @@ backup – keep export/import backwards compatible.
 - Pad labels must survive long German words ("Trommelwirbel", "krasser Angriff"): 2-line clamp, `hyphens: auto` (index.html has `lang="de"`), font size in `cqw` via `container-type: inline-size` on `.pad-wrap`.
 - DJ layout: `.board-rows` sets `--pad-w: clamp(140px, 14vw, 190px)`; `.board-row` is `flex-wrap: wrap` and `.pad-wrap` has that fixed width with `aspect-ratio: 3/2`. **Never give pads `flex: 1`** – equal width is a requirement, not a detail. Empty rows are hidden in the DJ view. On iPad landscape ~6 pads per line.
 - The arrangement editor uses the same `--pad-w`, so its wrapping matches the real board. It is rendered full-width (outside the `max-w-4xl` column) for that reason.
+- In a team-filtered editor view the drop index refers to the **visible** pads; `realIndex()` maps it back to the real position so hidden pads of the other team are not reordered. Tested – don't simplify this away.
 - Drag & drop uses **pointer events**, not the HTML5 drag API, because the latter does not work on iOS Safari. Hit-testing compares the pointer against each tile's rect (`y` inside the tile's line and `x` past its centre, or the whole line above) so it also works for wrapped rows. Tiles are focusable and arrow keys move them – keep that fallback.
 - Touch targets ≥ 44px in the DJ view; the STOP button must always be visible (no spacebar on iPad).
 

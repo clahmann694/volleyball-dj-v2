@@ -1,6 +1,7 @@
 import { CSSProperties, ChangeEvent, DragEvent, useRef, useState } from 'react';
-import { SoundPad } from '../../types';
+import { SoundPad, TeamId } from '../../types';
 import { useBoard } from '../../contexts/BoardContext';
+import { TEAMS } from '../../config/teams';
 import { ClipRow } from './ClipRow';
 import { ColorSwatches } from './ColorSwatches';
 
@@ -16,8 +17,36 @@ interface Props {
 const ACCEPT = 'audio/*,video/mp4,video/quicktime,video/x-m4v,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff,.mp4,.m4v,.mov';
 
 /** Ein Button in der Dev-Ansicht: Farbe, Name, Position, Sounds. */
+/** Zwei Schalter: bei welchen Mannschaften erscheint dieser Button? */
+function TeamChips({ pad, onChange }: { pad: SoundPad; onChange: (teams: TeamId[]) => void }) {
+  const toggle = (id: TeamId) => {
+    const next = pad.teams.includes(id) ? pad.teams.filter(t => t !== id) : [...pad.teams, id];
+    if (next.length === 0) return; // mindestens eine Mannschaft muss bleiben
+    onChange(next);
+  };
+  return (
+    <div className="flex items-center gap-1" role="group" aria-label="Mannschaften">
+      {TEAMS.map(t => {
+        const on = pad.teams.includes(t.id);
+        return (
+          <button
+            key={t.id}
+            onClick={() => toggle(t.id)}
+            aria-pressed={on}
+            title={on ? `${t.name}: wird angezeigt` : `${t.name}: ausgeblendet`}
+            className={`h-7 px-2.5 rounded-full text-xs font-bold transition-colors ${on ? 'text-white' : 'bg-white/5 text-white/35 hover:text-white/60'}`}
+            style={on ? { background: t.color } : undefined}
+          >
+            {t.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PadCard({ pad, rowIndex, onEditClip }: Props) {
-  const { updatePad, deletePad, addClipsFromFiles, busy } = useBoard();
+  const { updatePad, setPadTeams, deletePad, addClipsFromFiles, busy } = useBoard();
   const [dragOver, setDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -78,6 +107,7 @@ export function PadCard({ pad, rowIndex, onEditClip }: Props) {
           className="flex-1 min-w-[140px] h-9 px-2 rounded-lg bg-transparent hover:bg-white/5 focus:bg-white/10 outline-none font-semibold"
         />
         <ColorSwatches value={pad.color} onChange={hex => updatePad(pad.id, { color: hex })} />
+        <TeamChips pad={pad} onChange={teams => setPadTeams(pad.id, teams)} />
         <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400 ml-auto">🗑</button>
       </div>
 

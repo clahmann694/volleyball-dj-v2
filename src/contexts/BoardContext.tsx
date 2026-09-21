@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { allPads, BoardConfig, BoardRow, SoundClip, SoundPad } from '../types';
+import { allPads, BoardConfig, BoardRow, SoundClip, SoundPad, TeamId } from '../types';
 import { loadBoard, markChanged, markExported, saveBoard } from '../storage/boardStore';
 import { deleteFile, putFile, requestPersistence } from '../storage/audioStore';
 import { DEFAULT_BOARD } from '../config/defaultBoard';
@@ -36,7 +36,9 @@ interface BoardContextType {
   /** Loescht eine Zeile; ihre Pads wandern in die vorherige (oder naechste) Zeile */
   deleteRow: (rowId: string) => void;
   moveRow: (rowId: string, delta: number) => void;
-  addPad: (rowId: string, name: string, color: string) => void;
+  addPad: (rowId: string, name: string, color: string, teams: TeamId[]) => void;
+  /** Mannschaften eines Buttons setzen (leere Liste wird ignoriert) */
+  setPadTeams: (padId: string, teams: TeamId[]) => void;
   updatePad: (padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color'>>) => void;
   /** left/right: innerhalb der Zeile; up/down: ans Ende der Nachbarzeile (down in letzter Zeile = neue Zeile) */
   movePad: (padId: string, direction: MoveDirection) => void;
@@ -125,13 +127,19 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // ----- Pads -----
-  const addPad = useCallback((rowId: string, name: string, color: string) => {
+  const addPad = useCallback((rowId: string, name: string, color: string, teams: TeamId[]) => {
     setBoard(b => ({
       ...b,
       rows: b.rows.map(r =>
-        r.id === rowId ? { ...r, pads: [...r.pads, { id: newId(), name: name.trim() || 'Neuer Button', color, clips: [] }] } : r
+        r.id === rowId ? { ...r, pads: [...r.pads, { id: newId(), name: name.trim() || 'Neuer Button', color, teams, clips: [] }] } : r
       ),
     }));
+  }, []);
+
+  const setPadTeams = useCallback((padId: string, teams: TeamId[]) => {
+    // Ohne Mannschaft waere der Button nirgends sichtbar - dann lieber nichts aendern
+    if (teams.length === 0) return;
+    setBoard(b => mapPads(b, pad => (pad.id === padId ? { ...pad, teams } : pad)));
   }, []);
 
   const updatePad = useCallback((padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color'>>) => {
@@ -299,8 +307,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<BoardContextType>(
-    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard }),
-    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard]
+    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard }),
+    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard]
   );
 
   return <BoardCtx.Provider value={value}>{children}</BoardCtx.Provider>;

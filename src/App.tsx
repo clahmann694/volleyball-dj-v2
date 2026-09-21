@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AudioProvider, useAudio } from './contexts/AudioContext';
 import { BoardProvider } from './contexts/BoardContext';
+import { TeamProvider, useTeam } from './contexts/TeamContext';
 import { Header } from './components/Header';
+import { TeamPicker } from './components/TeamPicker';
 import { DjView } from './components/dj/DjView';
 import { DeveloperView } from './components/dev/DeveloperView';
 import { ViewMode } from './types';
@@ -13,6 +15,7 @@ function AppContent() {
   const [panelPadId, setPanelPadId] = useState<string | null>(null);
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   const { stopAll } = useAudio();
+  const { team } = useTeam();
 
   useEffect(() => {
     localStorage.setItem(VIEW_KEY, view);
@@ -36,11 +39,19 @@ function AppContent() {
     return () => window.removeEventListener('keydown', onKey);
   }, [stopAll]);
 
+  // Laufenden Sound stoppen, wenn die Mannschaft gewechselt wird
+  useEffect(() => {
+    if (!team) stopAll();
+  }, [team, stopAll]);
+
   const changeView = useCallback((next: ViewMode) => {
     setView(next);
     setPanelPadId(null);
     setEditingClipId(null);
   }, []);
+
+  // Ohne gewaehlte Mannschaft zuerst fragen
+  if (!team) return <TeamPicker />;
 
   return (
     <div className="h-full flex flex-col text-white">
@@ -57,9 +68,11 @@ function AppContent() {
 export default function App() {
   return (
     <BoardProvider>
-      <AudioProvider>
-        <AppContent />
-      </AudioProvider>
+      <TeamProvider>
+        <AudioProvider>
+          <AppContent />
+        </AudioProvider>
+      </TeamProvider>
     </BoardProvider>
   );
 }

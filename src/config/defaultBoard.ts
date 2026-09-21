@@ -1,4 +1,5 @@
 import { BoardConfig, SoundPad } from '../types';
+import { ALL_TEAM_IDS } from './teams';
 
 /** Die sechs Tastenfarben (aus den Referenzbildern gesampelt). */
 export const PAD_COLORS = [
@@ -19,12 +20,13 @@ export function padTextColor(hex: string): string {
   return lum > 0.6 ? '#0b1a27' : '#ffffff';
 }
 
-const pad = (id: string, name: string, color: string): SoundPad => ({ id, name, color, clips: [] });
+// Neue Buttons gelten zunaechst fuer beide Mannschaften
+const pad = (id: string, name: string, color: string): SoundPad => ({ id, name, color, teams: [...ALL_TEAM_IDS], clips: [] });
 const C = Object.fromEntries(PAD_COLORS.map(c => [c.id, c.hex])) as Record<(typeof PAD_COLORS)[number]['id'], string>;
 
 // Startbelegung: die Buttons aus der V1 (ohne Audiodateien), eine Zeile je frueherer Kategorie
 export const DEFAULT_BOARD: BoardConfig = {
-  version: 3,
+  version: 4,
   rows: [
     { id: 'row-scoring', pads: [pad('ace', 'Ass!', C.red), pad('block', 'Block!', C.red), pad('kill', 'Angriff!', C.red), pad('point', 'Punkt!', C.red), pad('set-point', 'Satzball', C.red)] },
     { id: 'row-momentum', pads: [pad('lets-go', "Los geht's!", C.orange), pad('air-horn', 'Tröte', C.orange), pad('drum-roll', 'Trommelwirbel', C.orange), pad('crowd-cheer', 'Jubel', C.orange), pad('siren', 'Sirene', C.orange)] },

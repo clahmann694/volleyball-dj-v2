@@ -1,6 +1,8 @@
 import { FormEvent, useState } from 'react';
+import { TeamId } from '../../types';
 import { useBoard } from '../../contexts/BoardContext';
 import { PAD_COLORS } from '../../config/defaultBoard';
+import { ALL_TEAM_IDS, TEAMS } from '../../config/teams';
 import { BundleControls } from './BundleControls';
 import { LayoutEditor } from './LayoutEditor';
 import { PadCard } from './PadCard';
@@ -20,6 +22,8 @@ interface Props {
 export function DeveloperView({ editingClipId, onEditClip, onCloseEditor }: Props) {
   const { board, clipIndex } = useBoard();
   const editing = editingClipId ? clipIndex.get(editingClipId) : undefined;
+  // null = beide Mannschaften zeigen
+  const [filter, setFilter] = useState<TeamId | null>(null);
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
@@ -29,15 +33,18 @@ export function DeveloperView({ editingClipId, onEditClip, onCloseEditor }: Prop
 
       {/* volle Breite, damit der Umbruch genauso aussieht wie im Spiel */}
       <section className="px-2 py-4" aria-label="Anordnung">
-        <LayoutEditor />
+        <TeamFilter value={filter} onChange={setFilter} />
+        <LayoutEditor teamFilter={filter} />
       </section>
 
       <div className="max-w-4xl mx-auto px-4 pb-4 space-y-3">
         <h2 className="text-[11px] uppercase tracking-[0.12em] text-vsg-ice/70 px-1">Buttons</h2>
         {board.rows.map((row, rowIndex) =>
-          row.pads.map(pad => <PadCard key={pad.id} pad={pad} rowIndex={rowIndex} onEditClip={onEditClip} />)
+          row.pads
+            .filter(pad => !filter || pad.teams.includes(filter))
+            .map(pad => <PadCard key={pad.id} pad={pad} rowIndex={rowIndex} onEditClip={onEditClip} />)
         )}
-        <AddPadRow />
+        <AddPadRow teamFilter={filter} />
       </div>
 
       {editing && <CuePointEditor key={editing.clip.id} clipRef={editing} onClose={onCloseEditor} />}
@@ -45,8 +52,33 @@ export function DeveloperView({ editingClipId, onEditClip, onCloseEditor }: Prop
   );
 }
 
+/** Umschalter: Anordnung für eine Mannschaft oder beide zeigen. */
+function TeamFilter({ value, onChange }: { value: TeamId | null; onChange: (t: TeamId | null) => void }) {
+  const options: Array<{ id: TeamId | null; label: string }> = [{ id: null, label: 'Beide' }, ...TEAMS.map(t => ({ id: t.id, label: t.name }))];
+  return (
+    <div className="flex items-center gap-2 mb-3 px-1">
+      <span className="text-[11px] uppercase tracking-[0.12em] text-vsg-ice/70">Ansicht</span>
+      <div className="flex rounded-lg bg-white/10 p-1 text-sm font-medium">
+        {options.map(o => (
+          <button
+            key={o.label}
+            onClick={() => onChange(o.id)}
+            aria-pressed={value === o.id}
+            className={`px-3 py-1.5 rounded-md transition-colors ${value === o.id ? 'bg-vsg-cyan text-white shadow' : 'text-vsg-ice hover:text-white'}`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <span className="text-xs text-white/40 hidden sm:inline">
+        {value ? 'Zeigt, was diese Mannschaft sieht – Ziehen funktioniert auch hier.' : 'Zeigt alle Buttons mit ihrer Zuordnung.'}
+      </span>
+    </div>
+  );
+}
+
 /** Neuer Button landet in der letzten Zeile und wird dann an seinen Platz gezogen. */
-function AddPadRow() {
+function AddPadRow({ teamFilter }: { teamFilter: TeamId | null }) {
   const { board, addPad } = useBoard();
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>(PAD_COLORS[0].hex);
@@ -54,7 +86,8 @@ function AddPadRow() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    addPad(board.rows[board.rows.length - 1].id, name, color);
+    // In einer Mannschafts-Ansicht gehoert der neue Button zunaechst nur dorthin
+    addPad(board.rows[board.rows.length - 1].id, name, color, teamFilter ? [teamFilter] : [...ALL_TEAM_IDS]);
     setName('');
   };
 
