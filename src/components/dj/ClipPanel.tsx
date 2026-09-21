@@ -17,7 +17,7 @@ export function ClipPanel({ padRef, onClose }: Props) {
   const playRandom = () => play(pad.id, pad.clips[Math.floor(Math.random() * pad.clips.length)]);
 
   return (
-    <aside className="w-72 shrink-0 flex flex-col bg-surface-1 border-l border-white/10" style={style}>
+    <aside className="w-72 shrink-0 flex flex-col bg-vsg-navy-900/95 backdrop-blur-xl border-l border-white/10" style={style}>
       <div className="flex items-center gap-3 p-4 border-b border-white/10">
         <span className="text-2xl">{pad.icon}</span>
         <h3 className="flex-1 text-lg font-bold truncate">{pad.name}</h3>
@@ -50,7 +50,7 @@ export function ClipPanel({ padRef, onClose }: Props) {
       </div>
 
       <div className="p-3 border-t border-white/10">
-        <button onClick={playRandom} className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-bold">
+        <button onClick={playRandom} className="w-full py-3 rounded-xl bg-vsg-blue hover:bg-vsg-cyan text-white font-bold">
           🎲 Zufällig abspielen
         </button>
       </div>

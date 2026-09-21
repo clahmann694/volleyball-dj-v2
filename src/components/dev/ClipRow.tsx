@@ -51,7 +51,7 @@ export function ClipRow({ clip, padId, index, onEdit }: Props) {
       >
         {isPlaying ? '■' : '▶'}
       </button>
-      <button onClick={onEdit} className="h-8 px-2.5 rounded-md bg-blue-600 hover:bg-blue-500 text-xs font-medium whitespace-nowrap">
+      <button onClick={onEdit} className="h-8 px-2.5 rounded-md bg-vsg-blue hover:bg-vsg-cyan text-xs font-medium whitespace-nowrap">
         ✂ Cue
       </button>
       <button onClick={remove} title="Sound löschen" className="w-8 h-8 rounded-md hover:bg-red-500/20 text-white/50 hover:text-red-400 text-sm">

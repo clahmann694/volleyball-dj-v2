@@ -11,7 +11,7 @@ export default defineConfig({
     // und die App-Huelle offline laedt. Die Sounds liegen ohnehin in IndexedDB.
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192.svg', 'icon-512.svg'],
+      includeAssets: ['icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'brand/vsg-logo-96.png'],
       manifest: {
         name: 'Volleyball DJ',
         short_name: 'VB DJ',
@@ -19,15 +19,15 @@ export default defineConfig({
         lang: 'de',
         display: 'standalone',
         orientation: 'any',
-        background_color: '#000000',
-        theme_color: '#000000',
+        background_color: '#0d283a',
+        theme_color: '#0d283a',
         icons: [
-          { src: 'icon-192.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
-          { src: 'icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
       },
     }),
   ],

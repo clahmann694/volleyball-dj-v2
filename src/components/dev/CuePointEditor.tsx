@@ -133,7 +133,7 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-xl rounded-2xl bg-surface-1 shadow-2xl" style={style} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-xl rounded-2xl bg-vsg-navy-900 border border-white/10 shadow-2xl" style={style} onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 p-4 border-b border-white/10">
           <h3 className="text-lg font-bold">Cue-Points setzen</h3>
           <span className="flex-1 text-right text-sm text-white/50 truncate">
@@ -145,7 +145,7 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
         </div>
 
         <div className="p-4">
-          {loadError && <p className="mb-3 text-sm text-orange-300">{loadError}</p>}
+          {loadError && <p className="mb-3 text-sm text-vsg-ice">{loadError}</p>}
 
           {/* Timeline */}
           <div
@@ -167,7 +167,7 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
             />
             {/* Playhead */}
             {playhead != null && (
-              <div className="absolute inset-y-0 w-0.5 bg-yellow-300 shadow-[0_0_8px_#fde047] pointer-events-none" style={{ left: pct(playhead) }} />
+              <div className="absolute inset-y-0 w-0.5 bg-white shadow-[0_0_8px_#ffffff] pointer-events-none" style={{ left: pct(playhead) }} />
             )}
             {/* Marker (ziehbar) */}
             <Marker side="start" pos={pct(start)} onPointerDown={onMarkerDown('start')} active={dragging === 'start'} />
@@ -197,10 +197,10 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
           <button onClick={reset} className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/15 font-semibold">
             Zurücksetzen
           </button>
-          <button onClick={togglePreview} disabled={!!loadError && !clip.duration} className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-semibold disabled:opacity-40">
+          <button onClick={togglePreview} disabled={!!loadError && !clip.duration} className="flex-1 py-3 rounded-xl bg-vsg-blue hover:bg-vsg-cyan font-semibold disabled:opacity-40">
             {isPreviewing ? '■ Stopp' : '▶ Vorschau'}
           </button>
-          <button onClick={save} className="flex-1 py-3 rounded-xl bg-green-500 hover:bg-green-400 text-black font-bold">
+          <button onClick={save} className="flex-1 py-3 rounded-xl bg-vsg-green hover:brightness-110 text-white font-bold">
             Speichern
           </button>
         </div>
@@ -239,7 +239,7 @@ function NumberField({ label, value, max, onChange }: { label: string; value: nu
           const v = parseFloat(e.target.value);
           if (Number.isFinite(v)) onChange(v);
         }}
-        className="h-10 px-3 rounded-lg bg-black/40 border border-white/15 focus:border-blue-500 outline-none text-white font-mono"
+        className="h-10 px-3 rounded-lg bg-black/40 border border-white/15 focus:border-vsg-cyan outline-none text-white font-mono"
       />
     </label>
   );

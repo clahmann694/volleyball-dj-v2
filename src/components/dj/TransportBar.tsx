@@ -25,9 +25,9 @@ export function TransportBar() {
   const style = { '--g': padRef?.group.color ?? '#ffffff' } as CSSProperties;
 
   return (
-    <footer className="relative shrink-0 border-t border-white/10 bg-surface-1/90 backdrop-blur-xl px-4 py-2 flex items-center gap-4" style={style}>
+    <footer className="relative shrink-0 border-t border-white/10 bg-vsg-navy-900/90 backdrop-blur-xl px-4 py-2 flex items-center gap-4" style={style}>
       {error && (
-        <div className="absolute left-4 right-4 -top-12 flex items-center gap-2 rounded-lg bg-red-600/95 px-3 py-2 text-sm shadow-lg">
+        <div className="absolute left-4 right-4 -top-12 flex items-center gap-2 rounded-lg bg-vsg-red/95 px-3 py-2 text-sm shadow-lg">
           <span className="flex-1">{error}</span>
           <button onClick={clearError} aria-label="Meldung schließen" className="px-1">✕</button>
         </div>
@@ -43,7 +43,7 @@ export function TransportBar() {
               <span className="text-white/40">·</span>
               <span className="text-white/70 truncate">{clipName}</span>
               {!isPlaying && <span className="text-xs text-white/40">lädt…</span>}
-              {isFading && <span className="text-xs text-orange-300 animate-pulse">Fade…</span>}
+              {isFading && <span className="text-xs text-vsg-ice animate-pulse">Fade…</span>}
             </div>
             <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
               <div className="h-full rounded-full transition-[width] duration-100" style={{ width: `${progress}%`, background: 'var(--g)' }} />
@@ -54,7 +54,7 @@ export function TransportBar() {
             </div>
           </>
         ) : (
-          <div className="text-white/40 text-sm">Bereit – tippe einen Button.</div>
+          <div className="text-vsg-ice/70 text-sm">Bereit – tippe einen Button.</div>
         )}
       </div>
 
@@ -62,7 +62,7 @@ export function TransportBar() {
       <button
         onClick={() => fadeOut(1500)}
         disabled={!isPlaying || isFading}
-        className="hidden sm:flex items-center gap-2 px-4 py-3 rounded-xl bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:hover:bg-orange-600 font-semibold text-sm"
+        className="hidden sm:flex items-center gap-2 px-4 py-3 rounded-xl border border-vsg-cyan/70 text-vsg-cyan hover:bg-vsg-cyan/15 disabled:opacity-40 disabled:hover:bg-transparent font-semibold text-sm"
       >
         <span>↘</span>
         <span>Fade out</span>
@@ -81,7 +81,7 @@ export function TransportBar() {
 
       {/* Volume */}
       <div className="hidden sm:flex items-center gap-2 w-40">
-        <span className="text-white/60">{volume === 0 ? '🔇' : '🔊'}</span>
+        <span className="text-vsg-ice">{volume === 0 ? '🔇' : '🔊'}</span>
         <input
           type="range"
           className="slider flex-1"

@@ -14,12 +14,20 @@ body,
 
 body {
   margin: 0;
-  background: #000;
+  /* Navy-Verlauf mit Glow wie der Splash-Screen der Vereins-App */
+  background: radial-gradient(ellipse 80% 55% at 50% 18%, #084463 0%, rgba(8, 68, 99, 0) 70%),
+    linear-gradient(180deg, #0d283a 0%, #0b1a27 55%, #07101a 100%);
+  background-attachment: fixed;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
+}
+
+:focus-visible {
+  outline: 2px solid #009fe3;
+  outline-offset: 2px;
 }
 
 button {
@@ -32,7 +40,7 @@ button {
 @layer components {
   /* Alles mit Gruppenfarbe bekommt die Farbe ueber --g gereicht */
   .group-card {
-    background: linear-gradient(180deg, rgba(44, 44, 46, 0.8) 0%, rgba(28, 28, 30, 0.9) 100%);
+    background: linear-gradient(180deg, rgba(17, 53, 73, 0.7) 0%, rgba(11, 26, 39, 0.9) 100%);
     border: 1px solid color-mix(in srgb, var(--g) 30%, transparent);
     box-shadow: inset 0 1px 0 color-mix(in srgb, var(--g) 25%, transparent);
   }
@@ -45,8 +53,8 @@ button {
   .pad {
     background: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--g) 26%, #3a3a3c) 0%,
-      color-mix(in srgb, var(--g) 16%, #2c2c2e) 100%
+      color-mix(in srgb, var(--g) 28%, #1b4058) 0%,
+      color-mix(in srgb, var(--g) 16%, #12324a) 100%
     );
     border: 1px solid color-mix(in srgb, var(--g) 40%, transparent);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -88,8 +96,8 @@ button {
   }
 
   .btn-stop {
-    background: linear-gradient(145deg, #ff5a50 0%, #ff453a 50%, #d63e36 100%);
-    box-shadow: 0 4px 20px rgba(255, 69, 58, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background: linear-gradient(145deg, #ff6b6f 0%, #e95055 55%, #b12a2e 100%);
+    box-shadow: 0 4px 20px rgba(233, 80, 85, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
   .btn-stop:not(:disabled):hover {
@@ -133,7 +141,7 @@ input[type='range'].slider {
   appearance: none;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(155, 195, 222, 0.25);
   outline: none;
 }
 input[type='range'].slider::-webkit-slider-thumb {
@@ -141,16 +149,17 @@ input[type='range'].slider::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fff;
+  background: #009fe3;
+  border: 2px solid #fff;
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 input[type='range'].slider::-moz-range-thumb {
   width: 18px;
   height: 18px;
-  border: 0;
+  border: 2px solid #fff;
   border-radius: 50%;
-  background: #fff;
+  background: #009fe3;
   cursor: pointer;
 }
 

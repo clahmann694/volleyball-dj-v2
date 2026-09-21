@@ -75,7 +75,10 @@ src/
 - Deleting a clip/pad deletes its blob; import/reset call `deleteOrphanFiles`.
 - On iPad the app must be added to the home screen, otherwise Safari may evict site data after 7 days without use.
 
-### UI
+### UI / Corporate Design
+- Colours follow the club CI of **VSG Kleinsteinbach** (defined as `vsg.*` in `tailwind.config.js`, sampled from the club logo and the club's "Getränkelager" app): cyan `#009fe3` (logo, active states), blue `#0089c8` (primary buttons), navy `#0d283a → #07101a` (background, like the club splash screen), ice `#9bc3de` (secondary text), red `#e95055`, green `#16a94f`. Dark theme only – decided 2026-09-21 (less glare in the gym).
+- The five **group colours stay functional** (pink/orange/green/purple/blue) so the DJ can hit the right row instantly; only chrome (header, buttons, panels, STOP) uses CI colours. Don't recolour groups to cyan.
+- Logo sources live in `assets/brand/` (`vsg-logo-cyan.png` = filled shield, `vsg-logo-outline.png`; not deployed). Only `public/brand/vsg-logo-96.png` (header) and the icons ship with the app. App icons are PNGs generated from the filled logo on white (`sips`), matching the club app's icon. Reference them via `import.meta.env.BASE_URL` (GitHub Pages sub-path).
 - Group colour is passed as CSS variable `--g`; the `.group-card`, `.pad`, `.badge-num` component classes in `index.css` use `color-mix()` with it. Tailwind utilities for everything else.
 - The DJ view must fit without scrolling on iPad landscape (1024×768): keep the compact `@media (max-height: 820px)` rules working when changing pad/group sizes.
 - Touch targets ≥ 44px in the DJ view; the STOP button must always be visible (no spacebar on iPad).

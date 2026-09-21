@@ -58,7 +58,7 @@ export function PadCard({ pad, onEditClip }: Props) {
       }}
       onDragLeave={() => setDragOver(false)}
       onDrop={onDrop}
-      className={`rounded-xl p-3 bg-black/30 border transition-colors ${dragOver ? 'border-white/60 bg-white/5' : 'border-transparent'}`}
+      className={`rounded-xl p-3 bg-vsg-navy-950/40 border transition-colors ${dragOver ? 'border-vsg-cyan bg-vsg-cyan/10' : 'border-transparent'}`}
     >
       <div className="flex items-center gap-2 pb-2 mb-2 border-b border-white/10">
         <input
@@ -94,12 +94,12 @@ export function PadCard({ pad, onEditClip }: Props) {
         <button
           onClick={() => fileInput.current?.click()}
           disabled={busy || importing}
-          className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 font-medium"
+          className="px-3 py-1.5 rounded-lg bg-vsg-blue hover:bg-vsg-cyan disabled:opacity-50 font-medium"
         >
           {importing ? 'Importiere…' : '＋ Dateien hinzufügen'}
         </button>
         <span className="text-white/40 hidden sm:inline">oder MP3s hierher ziehen</span>
-        {notice && <span className="ml-auto text-green-400">{notice}</span>}
+        {notice && <span className="ml-auto text-vsg-green font-medium">{notice}</span>}
       </div>
     </div>
   );

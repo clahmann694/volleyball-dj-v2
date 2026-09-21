@@ -73,7 +73,7 @@ export function BundleControls() {
   const disabled = busy || working !== null;
 
   return (
-    <section className="rounded-2xl bg-surface-1 border border-white/10 p-4">
+    <section className="rounded-2xl bg-vsg-navy-900/70 border border-white/10 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-base font-bold mr-auto">Einrichtung</h2>
         <button onClick={doExport} disabled={disabled || clipCount === 0} className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-sm font-medium">

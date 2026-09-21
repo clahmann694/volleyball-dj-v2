@@ -7,10 +7,15 @@ interface HeaderProps {
 
 export function Header({ view, onChangeView }: HeaderProps) {
   return (
-    <header className="shrink-0 h-14 px-4 flex items-center justify-between bg-surface-1/80 backdrop-blur-xl border-b border-white/10">
-      <h1 className="text-lg font-bold tracking-tight flex items-center gap-2">
-        <span>🏐</span>
-        <span className="bg-gradient-to-r from-yellow-300 to-orange-400 bg-clip-text text-transparent">VB DJ</span>
+    <header className="shrink-0 h-14 px-4 flex items-center justify-between bg-vsg-navy-900/80 backdrop-blur-xl border-b border-white/10">
+      <h1 className="flex items-center gap-3 min-w-0">
+        <span className="w-9 h-9 rounded-lg bg-white p-1 shrink-0 shadow">
+          <img src={`${import.meta.env.BASE_URL}brand/vsg-logo-96.png`} alt="VSG Kleinsteinbach" className="w-full h-full object-contain" />
+        </span>
+        <span className="flex flex-col leading-tight min-w-0">
+          <span className="text-base font-bold tracking-tight">VB DJ</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-vsg-ice truncate">VSG Kleinsteinbach</span>
+        </span>
       </h1>
 
       {/* Umschalter DJ / Dev */}
@@ -28,7 +33,7 @@ function ViewButton({ active, onClick, label, icon }: { active: boolean; onClick
       onClick={onClick}
       aria-pressed={active}
       className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-        active ? 'bg-blue-600 text-white shadow' : 'text-white/60 hover:text-white'
+        active ? 'bg-vsg-cyan text-white shadow' : 'text-vsg-ice hover:text-white'
       }`}
     >
       <span>{icon}</span>

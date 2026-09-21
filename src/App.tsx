@@ -43,7 +43,7 @@ function AppContent() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-black text-white">
+    <div className="h-full flex flex-col text-white">
       <Header view={view} onChangeView={changeView} />
       {view === 'dj' ? (
         <DjView panelPadId={panelPadId} onOpenPanel={setPanelPadId} onClosePanel={() => setPanelPadId(null)} />
