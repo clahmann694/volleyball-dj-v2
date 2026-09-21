@@ -96,6 +96,11 @@ tests can touch that. What CAN destroy her data – never do these without an ex
 - "Zurücksetzen" and bundle import replace everything on that device (both `window.confirm`).
 The Dev view shows an export-reminder (amber when changed since last export); the `.vbdj` export is her only
 backup – keep export/import backwards compatible.
+A device with no sounds at all gets a banner in the DJ view explaining that sounds are per device and how to
+transfer a bundle (she once AirDropped the *link* to the iPad and thought the app had lost her buttons – 2026-09-21).
+**Updates are only picked up on page load.** A tab open for hours stays on its build; that is intended (no periodic
+`update()` – it would reload mid-match and the new worker would evict the old lazy chunks). Lazy imports therefore
+catch failures: `bundle.ts` throws a "bitte neu laden" error, `audioTranscode.ts` falls back to storing the original.
 
 - Audio files are per device (IndexedDB). Never assume a `fileId` has a blob – handle "missing" gracefully (`play()` shows an error toast).
 - Deleting a clip/pad deletes its blob; import/reset call `deleteOrphanFiles`.
