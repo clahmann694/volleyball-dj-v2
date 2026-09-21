@@ -30,7 +30,7 @@ npm run type-check   # tsc --noEmit (strict, noUnusedLocals)
 - React 19 + TypeScript (strict), Vite 7, Tailwind CSS 3.4
 - Howler.js for playback (`html5: true`, blob URLs, cue points as Howler **sprites**)
 - IndexedDB for audio blobs, localStorage for board config, JSZip for bundles
-- vite-plugin-pwa for the installable app shell
+- vite-plugin-pwa for the installable app shell (registration in `src/registerServiceWorker.ts`, `injectRegister: null`)
 - WebCodecs `AudioEncoder` + `mp4-muxer` to keep only the audio track of imported videos
 
 ### Data flow
@@ -102,6 +102,13 @@ backup – keep export/import backwards compatible.
 - Pad labels must survive long German words ("Trommelwirbel", "krasser Angriff"): 2-line clamp, `hyphens: auto` (index.html has `lang="de"`), font size in `cqw` via `container-type: inline-size` on `.pad-wrap`.
 - DJ layout: `.board-rows` is a flex column, each `.board-row` is `flex: 1 1 0` (min 84px, max 190px) and its pads `flex: 1 1 0` – no aspect ratio, pads fill the row. Empty rows are hidden in the DJ view. With ≤ 5 rows everything fits on iPad landscape; more rows scroll. Don't make rows shorter than 72px – pads are tapped in a hurry.
 - Touch targets ≥ 44px in the DJ view; the STOP button must always be visible (no spacebar on iPad).
+
+### Deployment / service worker
+- **A deploy does not reach an open browser by itself.** The precaching service worker serves the cached build; measured with two real builds on 2026-09-21, the user needed **two** reloads to see a new version – once to install the new worker, once to be served by it. That is what made her believe a feature was missing.
+- `registerServiceWorker()` therefore reloads the page once on `controllerchange`, guarded by `navigator.serviceWorker.controller` having existed before (so a first visit never reloads). Verified: one user reload picks up the new build, no reload loop, first visit reloads zero times.
+- **Deliberately no periodic `registration.update()`**: a reload during a match would cut the music. Updates are only checked when the page is opened.
+- The Dev view prints the build timestamp (`__BUILD_TIME__`, defined in `vite.config.ts`) – ask the user for it when a feature "is missing".
+- To test caching behaviour: build twice into two folders, serve them with a tiny node server that reads the current folder from a file, swap the file, and drive Chrome (see scratchpad `swtest/`). Waiting 1.5 s after a reload is too short – the worker needs a few seconds to install.
 
 ### Testing changes
 There are no unit tests. Verify in a browser: `npm run dev -- --no-open`, then drive Chrome headless with playwright-core (`channel: 'chrome'`) – import a test file, set a cue, play from the DJ view, reload, check `console` errors. Test tones can be generated with Python's `wave` module and converted with `afconvert`.

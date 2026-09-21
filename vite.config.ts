@@ -11,6 +11,8 @@ export default defineConfig({
     // und die App-Huelle offline laedt. Die Sounds liegen ohnehin in IndexedDB.
     VitePWA({
       registerType: 'autoUpdate',
+      // Registrierung erfolgt in src/registerServiceWorker.ts (mit Neuladen bei Updates)
+      injectRegister: null,
       includeAssets: ['icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'brand/vsg-logo-96.png'],
       manifest: {
         name: 'Volleyball DJ',
@@ -31,6 +33,10 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    // Im Dev-Modus sichtbar machen, welcher Stand laeuft
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   server: {
     port: 3000,
     open: true,

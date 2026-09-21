@@ -125,6 +125,9 @@ export function BundleControls() {
             : `✓ Gesichert – letzter Export ${fmtDate(lastExport!)}.`}
         </p>
       )}
+      <p className="mt-2 text-xs text-white/30">
+        App-Stand: {new Date(__BUILD_TIME__).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+      </p>
       <p className="mt-2 text-xs text-white/40">
         Ein Bundle (.vbdj) enthält alle Buttons, Cue-Points und Audiodateien. Es lässt sich nicht mit einem Programm öffnen – nur hier über
         „Importieren“ laden. So ziehst du die Einrichtung vom Mac aufs iPad (AirDrop) oder legst ein Backup an. Achtung: Import ersetzt die
