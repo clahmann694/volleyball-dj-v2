@@ -34,12 +34,18 @@ function audioSpecificConfig(sampleRate: number, channels: number): Uint8Array {
   return new Uint8Array([bits >> 8, bits & 0xff]);
 }
 
-/** Formate, bei denen sich das Umwandeln lohnt (Video oder unkomprimiert). */
+/**
+ * Formate, bei denen sich das Umwandeln lohnt: Video (Tonspur reicht) oder
+ * unkomprimiert (WAV/AIFF/FLAC). Bereits verlustbehaftet komprimierte Dateien
+ * (MP3, M4A, AAC, OGG, Opus) werden NIE neu kodiert - jede weitere Kodierung
+ * kostet Qualitaet, egal wie hoch ihre Bitrate ist (320-kbit/s-MP3, iTunes 256k).
+ */
 export function shouldCompress(file: { type: string; name: string; size: number }, duration: number | null): boolean {
   if (file.type.startsWith('video/') || /\.(mp4|m4v|mov|webm)$/i.test(file.name)) return true;
   if (/\.(wav|aif|aiff|flac)$/i.test(file.name) || /wav|aiff|flac/.test(file.type)) return true;
-  // Sicherheitsnetz: alles ueber ~256 kbit/s ist entweder Video oder verlustfrei
-  if (duration && duration > 0) return (file.size * 8) / duration > 256_000;
+  if (/\.(mp3|m4a|aac|ogg|oga|opus)$/i.test(file.name) || /mpeg|mp3|mp4|aac|ogg|opus/.test(file.type)) return false;
+  // Sicherheitsnetz nur fuer unbekannte Formate: alles ueber ~400 kbit/s ist Video oder verlustfrei
+  if (duration && duration > 0) return (file.size * 8) / duration > 400_000;
   return false;
 }
 
