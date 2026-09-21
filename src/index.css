@@ -45,6 +45,7 @@ button {
     --c: #e00000;
     --t: #fff;
     container-type: inline-size;
+    position: relative;
   }
 
   .pad3d {
@@ -201,21 +202,33 @@ button {
   }
 }
 
-/* Zeilen teilen sich die Hoehe; bei vielen Zeilen wird gescrollt */
-.board-row {
-  flex: 1 1 0;
-  min-height: 84px;
-  max-height: 190px;
+/* Alle Buttons sind gleich breit (--pad-w). Passen in eine Zeile mehr Buttons,
+   als nebeneinander Platz haben, bricht die Zeile um. */
+.board-rows {
+  --pad-w: clamp(140px, 14vw, 190px);
 }
 
-/* Niedrige Fenster (iPad quer, kleine Laptops): engeres Raster */
+.board-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pad-wrap {
+  width: var(--pad-w);
+  aspect-ratio: 3 / 2;
+}
+
+/* Kacheln im Anordnungs-Editor: gleiche Breite wie die echten Buttons */
+.pad-tile {
+  width: var(--pad-w);
+  height: calc(var(--pad-w) / 3);
+  min-height: 44px;
+}
+
 @media (max-height: 820px) {
-  .board-rows,
-  .board-row {
-    gap: 0.5rem;
-  }
-  .board-row {
-    min-height: 72px;
+  .board-rows {
+    --pad-w: clamp(128px, 13vw, 168px);
   }
 }
 

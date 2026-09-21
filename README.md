@@ -5,12 +5,13 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 ## Was die App kann
 
 **DJ-Ansicht** (im Spiel)
-- Ein Raster aus großen 3D-Tasten in sechs Farben (Rot, Orange, Gelb, Grün, Blau, Lila), frei beschriftbar – „Block", „Ass", „krasser Angriff"
+- Gleich große 3D-Tasten in sechs Farben (Rot, Orange, Gelb, Grün, Blau, Lila), frei beschriftbar – „Block", „Ass", „krasser Angriff"; passen mehr Tasten in eine Zeile, als nebeneinander Platz haben, wird umgebrochen
 - Tippen spielt den Sound, nochmal tippen stoppt. Tasten mit mehreren Sounds wählen zufällig – oder du wählst gezielt in der Seitenleiste.
 - Transportleiste: was läuft, Restzeit, **Fade out**, großer **STOP**-Button (am Mac auch Leertaste), Lautstärke
 
 **Dev-Ansicht** (Einrichtung)
-- Tasten anlegen, beschriften, Farbe wählen, per ← → sortieren, löschen
+- Tasten anlegen, beschriften, Farbe wählen, löschen
+- Anordnung mit der Maus: Tasten an ihren Platz ziehen, in eine andere Zeile oder in eine neue
 - Audiodateien per Datei-Dialog oder Drag & Drop hinzufügen (MP3, M4A, WAV, …)
 - **Cue-Points** setzen: Wellenform, Klick = Start, Shift-Klick = Ende, Marker ziehen, Vorschau
 - Komplette Einrichtung als `.vbdj`-Bundle exportieren/importieren (Buttons + Cue-Points + Audiodateien)
@@ -43,7 +44,7 @@ Details zur Architektur in [CLAUDE.md](CLAUDE.md).
 
 ## Roadmap
 
-- [x] Soundboard mit frei sortierbaren 3D-Tasten, Mehrfach-Sounds
+- [x] Soundboard mit frei anordenbaren 3D-Tasten (Ziehen mit der Maus), Mehrfach-Sounds
 - [x] Cue-Point-Editor mit Wellenform
 - [x] Lokaler Import, Export/Import als Bundle, PWA
 - [ ] Native Mac-App (Tauri) mit direktem Ordnerzugriff

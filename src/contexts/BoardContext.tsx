@@ -40,6 +40,8 @@ interface BoardContextType {
   updatePad: (padId: string, patch: Partial<Pick<SoundPad, 'name' | 'color'>>) => void;
   /** left/right: innerhalb der Zeile; up/down: ans Ende der Nachbarzeile (down in letzter Zeile = neue Zeile) */
   movePad: (padId: string, direction: MoveDirection) => void;
+  /** Setzt ein Pad an eine genaue Position (Ziehen mit der Maus). rowId NEW_ROW = neue Zeile am Ende. */
+  movePadTo: (padId: string, rowId: string, index: number) => void;
   deletePad: (padId: string) => Promise<void>;
   addClipsFromFiles: (padId: string, files: Iterable<File>) => Promise<number>;
   updateClip: (clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration'>>) => void;
@@ -48,6 +50,9 @@ interface BoardContextType {
   importBoard: (file: File) => Promise<void>;
   resetBoard: () => Promise<void>;
 }
+
+/** Pseudo-Zeile: Ablegen hier erzeugt eine neue Zeile am Ende */
+export const NEW_ROW = '__neue_zeile__';
 
 const BoardCtx = createContext<BoardContextType | undefined>(undefined);
 
@@ -161,6 +166,30 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const movePadTo = useCallback((padId: string, rowId: string, index: number) => {
+    setBoard(b => {
+      const pos = locate(b, padId);
+      if (!pos) return b;
+      const rows = b.rows.map(r => ({ ...r, pads: [...r.pads] }));
+      const [pad] = rows[pos.rowIndex].pads.splice(pos.index, 1);
+
+      if (rowId === NEW_ROW) {
+        rows.push({ id: newId(), pads: [pad] });
+      } else {
+        const target = rows.findIndex(r => r.id === rowId);
+        if (target < 0) return b;
+        // Beim Verschieben innerhalb derselben Zeile ruecken die Positionen hinter
+        // der Entnahmestelle um eins nach vorne
+        const i = target === pos.rowIndex && index > pos.index ? index - 1 : index;
+        rows[target].pads.splice(Math.max(0, Math.min(rows[target].pads.length, i)), 0, pad);
+      }
+
+      // Durch den Umzug leer gewordene Zeile entfernen (ausser es bleibt keine uebrig)
+      const cleaned = rows.filter(r => r.pads.length > 0);
+      return { ...b, rows: cleaned.length ? cleaned : [{ id: newId(), pads: [] }] };
+    });
+  }, []);
+
   const deletePad = useCallback(
     async (padId: string) => {
       const pos = padIndex.get(padId);
@@ -270,8 +299,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<BoardContextType>(
-    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, updatePad, movePad, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard }),
-    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, updatePad, movePad, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard]
+    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard }),
+    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, deleteClip, exportBoard, importBoard, resetBoard]
   );
 
   return <BoardCtx.Provider value={value}>{children}</BoardCtx.Provider>;

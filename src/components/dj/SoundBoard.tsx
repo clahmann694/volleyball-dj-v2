@@ -15,9 +15,9 @@ export function SoundBoard({ onOpenPanel }: { onOpenPanel: (padId: string) => vo
   }
 
   return (
-    <div className="board-rows h-full flex flex-col gap-2">
+    <div className="board-rows flex flex-col gap-2">
       {rows.map(row => (
-        <div key={row.id} className="board-row flex gap-2">
+        <div key={row.id} className="board-row">
           {row.pads.map(pad => (
             <SoundPad key={pad.id} pad={pad} onOpenPanel={onOpenPanel} />
           ))}

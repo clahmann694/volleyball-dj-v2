@@ -9,11 +9,11 @@ Volleyball DJ V2 – a soundboard web app for DJing volleyball matches, built wi
 The user speaks German; UI strings are German, code/comments/commits are English (comments may be German where they explain domain intent).
 
 ### Key Concept: Soundboard with Cue Points
-The board is a list of **rows**, each holding any number of **pads** (buttons such as "Ass!", "Block!", "krasser Angriff"). Pads in a row share the width equally, so a row with one pad is one full-width button and a row with four is four quarter-width buttons – the user arranges this freely in the Dev view (requested 2026-09-21; before that: v2 flat grid, v1 fixed categories – both migrated in `boardStore.migrateBoard`, v2 → rows of 6 to preserve the iPad layout). Each pad has one of six **colours** (`PAD_COLORS`) and 1..n **clips**; clicking a pad plays a random clip, clicking again stops it. Every clip has **cue points** (start/end in seconds) so any full-length song can be turned into a 25-second timeout clip without editing the file.
+The board is a list of **rows**, each holding any number of **pads** (buttons such as "Ass!", "Block!", "krasser Angriff"). **All pads are the same width** (`--pad-w`); a row never stretches its pads, and a row holding more pads than fit wraps onto the next line (explicitly requested 2026-09-21 – an earlier version stretched pads to fill the row and she rejected it). Rows are the explicit grouping: they force a line break. Arranged by **dragging with the mouse** in the Dev view (v2 flat grid and v1 categories are migrated in `boardStore.migrateBoard`, v2 → rows of 6). Each pad has one of six **colours** (`PAD_COLORS`) and 1..n **clips**; clicking a pad plays a random clip, clicking again stops it. Every clip has **cue points** (start/end in seconds) so any full-length song can be turned into a 25-second timeout clip without editing the file.
 
 Two views:
 - **DJ view** – the dashboard used during games: 3D arcade-style pads (CSS only: `.pad3d` base + `.pad3d__cap`), side panel for multi-clip pads, transport bar (now playing, fade out, STOP, volume). Space = stop all.
-- **Dev view** – setup: layout preview, one section per row (⇡ ⇣ reorder rows, "Zeile auflösen" merges pads into the row above, "＋ Neue Zeile"), pads move ← → within a row and ↑ ↓ to the end of the neighbouring row (↓ on the last row creates a new row; a row emptied by a move disappears), rename/recolour, import audio (file picker or drag & drop), cue editor, `.vbdj` export/import.
+- **Dev view** – setup: a full-width **arrangement editor** (`LayoutEditor`) where pads are dragged into place, plus one settings card per pad (name, colour, sounds, cue) and `.vbdj` export/import. Per-pad arrow buttons were removed – she found them cumbersome.
 
 ## Development Commands
 
@@ -58,7 +58,7 @@ src/
 ├── components/
 │   ├── Header.tsx            # title + DJ/Dev toggle
 │   ├── dj/                   # DjView, SoundBoard (rows), SoundPad (3D button), ClipPanel, TransportBar
-│   └── dev/                  # DeveloperView, PadCard, ColorSwatches, ClipRow, CuePointEditor, Waveform, BundleControls
+│   └── dev/                  # DeveloperView, LayoutEditor (drag & drop), PadCard, ColorSwatches, ClipRow, CuePointEditor, Waveform, BundleControls
 ├── utils/                    # audioFormat (mime/ext, duration), audioTranscode (video → AAC/M4A), bundle (zip), waveform (peaks), formatTime, id
 └── App.tsx                   # providers, view state, keyboard shortcuts (Space, Escape)
 ```
@@ -100,7 +100,9 @@ backup – keep export/import backwards compatible.
 - Pad colour is passed as CSS variable `--c` (text colour `--t`) on `.pad-wrap`; `.pad3d*` and `.badge-num` in `index.css` derive every shade with `color-mix()`. Defaults for `--c/--t` live on `.pad-wrap`, never on `.pad3d` (they would override the inline values). Tailwind utilities for everything else.
 - **Never use percentage padding on the vertical axis of `.pad3d__cap`** – percentages resolve against the element's *width*, so a full-width pad (one pad per row) got 60 px top/bottom padding and the label collapsed to 0 px (found 2026-09-21). Vertical padding is in px, horizontal may stay in %; the cap uses `display: grid; place-content: center` so the label keeps its intrinsic height.
 - Pad labels must survive long German words ("Trommelwirbel", "krasser Angriff"): 2-line clamp, `hyphens: auto` (index.html has `lang="de"`), font size in `cqw` via `container-type: inline-size` on `.pad-wrap`.
-- DJ layout: `.board-rows` is a flex column, each `.board-row` is `flex: 1 1 0` (min 84px, max 190px) and its pads `flex: 1 1 0` – no aspect ratio, pads fill the row. Empty rows are hidden in the DJ view. With ≤ 5 rows everything fits on iPad landscape; more rows scroll. Don't make rows shorter than 72px – pads are tapped in a hurry.
+- DJ layout: `.board-rows` sets `--pad-w: clamp(140px, 14vw, 190px)`; `.board-row` is `flex-wrap: wrap` and `.pad-wrap` has that fixed width with `aspect-ratio: 3/2`. **Never give pads `flex: 1`** – equal width is a requirement, not a detail. Empty rows are hidden in the DJ view. On iPad landscape ~6 pads per line.
+- The arrangement editor uses the same `--pad-w`, so its wrapping matches the real board. It is rendered full-width (outside the `max-w-4xl` column) for that reason.
+- Drag & drop uses **pointer events**, not the HTML5 drag API, because the latter does not work on iOS Safari. Hit-testing compares the pointer against each tile's rect (`y` inside the tile's line and `x` past its centre, or the whole line above) so it also works for wrapped rows. Tiles are focusable and arrow keys move them – keep that fallback.
 - Touch targets ≥ 44px in the DJ view; the STOP button must always be visible (no spacebar on iPad).
 
 ### Deployment / service worker

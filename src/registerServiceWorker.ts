@@ -12,6 +12,8 @@
  * laeuft noch nichts, und das Neuladen faellt nicht auf.
  */
 export function registerServiceWorker(): void {
+  // Im Dev-Server gibt es keine sw.js - die Registrierung wuerde nur Fehler in der Konsole erzeugen
+  if (import.meta.env.DEV) return;
   if (!('serviceWorker' in navigator)) return;
 
   const base = import.meta.env.BASE_URL;

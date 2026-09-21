@@ -6,11 +6,8 @@ import { ColorSwatches } from './ColorSwatches';
 
 interface Props {
   pad: SoundPad;
+  /** Nur zur Orientierung - verschoben wird oben in der Anordnung */
   rowIndex: number;
-  rowCount: number;
-  /** Position innerhalb der Zeile */
-  index: number;
-  padsInRow: number;
   onEditClip: (clipId: string) => void;
 }
 
@@ -19,8 +16,8 @@ interface Props {
 const ACCEPT = 'audio/*,video/mp4,video/quicktime,video/x-m4v,.mp3,.m4a,.wav,.ogg,.aac,.flac,.aiff,.mp4,.m4v,.mov';
 
 /** Ein Button in der Dev-Ansicht: Farbe, Name, Position, Sounds. */
-export function PadCard({ pad, rowIndex, rowCount, index, padsInRow, onEditClip }: Props) {
-  const { updatePad, movePad, deletePad, addClipsFromFiles, busy } = useBoard();
+export function PadCard({ pad, rowIndex, onEditClip }: Props) {
+  const { updatePad, deletePad, addClipsFromFiles, busy } = useBoard();
   const [dragOver, setDragOver] = useState(false);
   const [importing, setImporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -71,7 +68,9 @@ export function PadCard({ pad, rowIndex, rowCount, index, padsInRow, onEditClip 
       }`}
     >
       <div className="flex flex-wrap items-center gap-2 pb-2 mb-2 border-b border-white/10">
-        <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white/70 bg-white/10 shrink-0">{index + 1}</span>
+        <span className="px-2 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white/60 bg-white/10 shrink-0" title="Zeile auf dem Dashboard">
+          Zeile {rowIndex + 1}
+        </span>
         <input
           value={pad.name}
           onChange={e => updatePad(pad.id, { name: e.target.value })}
@@ -79,13 +78,7 @@ export function PadCard({ pad, rowIndex, rowCount, index, padsInRow, onEditClip 
           className="flex-1 min-w-[140px] h-9 px-2 rounded-lg bg-transparent hover:bg-white/5 focus:bg-white/10 outline-none font-semibold"
         />
         <ColorSwatches value={pad.color} onChange={hex => updatePad(pad.id, { color: hex })} />
-        <div className="flex items-center gap-1 ml-auto">
-          <button onClick={() => movePad(pad.id, 'left')} disabled={index === 0} title="In der Zeile nach links" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">←</button>
-          <button onClick={() => movePad(pad.id, 'right')} disabled={index === padsInRow - 1} title="In der Zeile nach rechts" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">→</button>
-          <button onClick={() => movePad(pad.id, 'up')} disabled={rowIndex === 0} title="In die Zeile darüber" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30">↑</button>
-          <button onClick={() => movePad(pad.id, 'down')} title={rowIndex === rowCount - 1 ? 'In eine neue Zeile darunter' : 'In die Zeile darunter'} className="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20">↓</button>
-          <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400 ml-1">🗑</button>
-        </div>
+        <button onClick={remove} title="Button löschen" className="w-9 h-9 rounded-lg hover:bg-red-500/20 text-white/50 hover:text-red-400 ml-auto">🗑</button>
       </div>
 
       <div className="space-y-1.5">
