@@ -21,10 +21,16 @@ export async function createBundle(board: BoardConfig): Promise<Blob> {
   const zip = new JSZip();
   zip.file('board.json', JSON.stringify(board, null, 2));
   const folder = zip.folder('files')!;
+  // Kopien teilen sich eine Datei - jede nur einmal ins Bundle
+  const written = new Set<string>();
   for (const pad of allPads(board)) {
     for (const clip of pad.clips) {
+      if (written.has(clip.fileId)) continue;
       const stored = await getFile(clip.fileId);
-      if (stored) folder.file(clip.fileId, stored.blob);
+      if (stored) {
+        folder.file(clip.fileId, stored.blob);
+        written.add(clip.fileId);
+      }
     }
   }
   // Audio ist schon komprimiert - STORE spart Zeit
@@ -39,10 +45,13 @@ export async function readBundle(file: Blob): Promise<BoardConfig> {
   const board = migrateBoard(JSON.parse(json));
   if (!board) throw new Error('Unbekanntes Bundle-Format.');
 
+  const restored = new Set<string>();
   for (const pad of allPads(board)) {
     for (const clip of pad.clips) {
+      if (restored.has(clip.fileId)) continue;
       const entry = zip.file(`files/${clip.fileId}`);
       if (!entry) continue;
+      restored.add(clip.fileId);
       const blob = await entry.async('blob');
       await putFile({
         id: clip.fileId,

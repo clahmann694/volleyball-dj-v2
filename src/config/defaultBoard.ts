@@ -7,6 +7,7 @@ export const PAD_COLORS = [
   { id: 'orange', hex: '#fb6203', label: 'Orange' },
   { id: 'yellow', hex: '#fedc05', label: 'Gelb' },
   { id: 'green', hex: '#10cc1c', label: 'Grün' },
+  { id: 'lightblue', hex: '#0093d8', label: 'Hellblau' },
   { id: 'blue', hex: '#0a45f8', label: 'Blau' },
   { id: 'purple', hex: '#8f0af0', label: 'Lila' },
 ] as const;

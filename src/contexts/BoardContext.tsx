@@ -53,6 +53,8 @@ interface BoardContextType {
   moveClip: (clipId: string, delta: number) => void;
   /** Sound in einen anderen Button verschieben (ans Ende) */
   moveClipToPad: (clipId: string, targetPadId: string) => void;
+  /** Sound zusaetzlich in einen anderen Button legen; beide teilen sich die Audiodatei */
+  copyClipToPad: (clipId: string, targetPadId: string) => void;
   deleteClip: (clipId: string) => Promise<void>;
   exportBoard: () => Promise<Blob>;
   importBoard: (file: File) => Promise<void>;
@@ -102,6 +104,16 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     });
     return { padIndex, clipIndex };
   }, [board]);
+
+  /** Audiodateien, die ausser den genannten Clips noch jemand benutzt (Kopien teilen sich Dateien) */
+  const filesUsedElsewhere = useCallback(
+    (exceptClipIds: Set<string>) => {
+      const used = new Set<string>();
+      for (const pad of allPads(board)) for (const c of pad.clips) if (!exceptClipIds.has(c.id)) used.add(c.fileId);
+      return used;
+    },
+    [board]
+  );
 
   // ----- Zeilen -----
   const addRow = useCallback(() => {
@@ -208,10 +220,13 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     async (padId: string) => {
       const pos = padIndex.get(padId);
       if (!pos) return;
+      const stillUsed = filesUsedElsewhere(new Set(pos.pad.clips.map(c => c.id)));
       setBoard(b => mapPads(b, p => (p.id === padId ? null : p)));
-      for (const clip of pos.pad.clips) await deleteFile(clip.fileId).catch(() => undefined);
+      for (const clip of pos.pad.clips) {
+        if (!stillUsed.has(clip.fileId)) await deleteFile(clip.fileId).catch(() => undefined);
+      }
     },
-    [padIndex]
+    [padIndex, filesUsedElsewhere]
   );
 
   // ----- Clips -----
@@ -289,12 +304,12 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
               : pad
           )
         );
-        await deleteFile(old.fileId).catch(() => undefined);
+        if (!filesUsedElsewhere(new Set([clipId])).has(old.fileId)) await deleteFile(old.fileId).catch(() => undefined);
       } finally {
         setBusy(false);
       }
     },
-    [clipIndex, prepareFile]
+    [clipIndex, prepareFile, filesUsedElsewhere]
   );
 
   const updateClip = useCallback((clipId: string, patch: Partial<Pick<SoundClip, 'name' | 'cue' | 'duration' | 'gain'>>) => {
@@ -332,14 +347,26 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const copyClipToPad = useCallback((clipId: string, targetPadId: string) => {
+    setBoard(b => {
+      const src = allPads(b)
+        .flatMap(p => p.clips)
+        .find(c => c.id === clipId);
+      if (!src) return b;
+      // Gleiche fileId: die Audiodatei liegt nur einmal im Speicher
+      return mapPads(b, pad => (pad.id === targetPadId ? { ...pad, clips: [...pad.clips, { ...src, id: newId() }] } : pad));
+    });
+  }, []);
+
   const deleteClip = useCallback(
     async (clipId: string) => {
       const ref = clipIndex.get(clipId);
       if (!ref) return;
+      const stillUsed = filesUsedElsewhere(new Set([clipId]));
       setBoard(b => mapPads(b, pad => (pad.id === ref.pad.id ? { ...pad, clips: pad.clips.filter(c => c.id !== clipId) } : pad)));
-      await deleteFile(ref.clip.fileId).catch(() => undefined);
+      if (!stillUsed.has(ref.clip.fileId)) await deleteFile(ref.clip.fileId).catch(() => undefined);
     },
-    [clipIndex]
+    [clipIndex, filesUsedElsewhere]
   );
 
   // ----- Bundle -----
@@ -372,8 +399,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<BoardContextType>(
-    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, replaceClipFile, moveClip, moveClipToPad, deleteClip, exportBoard, importBoard, resetBoard }),
-    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, replaceClipFile, moveClip, moveClipToPad, deleteClip, exportBoard, importBoard, resetBoard]
+    () => ({ board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, replaceClipFile, moveClip, moveClipToPad, copyClipToPad, deleteClip, exportBoard, importBoard, resetBoard }),
+    [board, padIndex, clipIndex, busy, addRow, deleteRow, moveRow, addPad, setPadTeams, updatePad, movePad, movePadTo, deletePad, addClipsFromFiles, updateClip, replaceClipFile, moveClip, moveClipToPad, copyClipToPad, deleteClip, exportBoard, importBoard, resetBoard]
   );
 
   return <BoardCtx.Provider value={value}>{children}</BoardCtx.Provider>;

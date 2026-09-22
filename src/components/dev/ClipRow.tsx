@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function ClipRow({ clip, padId, index, total, onEdit }: Props) {
-  const { board, updateClip, replaceClipFile, moveClip, moveClipToPad, deleteClip } = useBoard();
+  const { board, updateClip, replaceClipFile, moveClip, moveClipToPad, copyClipToPad, deleteClip } = useBoard();
   const fileInput = useRef<HTMLInputElement>(null);
   const [replacing, setReplacing] = useState<'busy' | 'done' | 'error' | null>(null);
 
@@ -94,17 +94,30 @@ export function ClipRow({ clip, padId, index, total, onEdit }: Props) {
       <button onClick={() => moveClip(clip.id, 1)} disabled={index === total - 1} title="Nach unten" className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-25 text-xs">↓</button>
       <select
         value=""
-        onChange={e => e.target.value && moveClipToPad(clip.id, e.target.value)}
-        title="In einen anderen Button verschieben"
-        aria-label="In einen anderen Button verschieben"
+        onChange={e => {
+          const [action, padId] = e.target.value.split(':');
+          if (action === 'move') moveClipToPad(clip.id, padId);
+          else if (action === 'copy') copyClipToPad(clip.id, padId);
+        }}
+        title="In einen anderen Button verschieben oder zusätzlich dorthin kopieren"
+        aria-label="In einen anderen Button verschieben oder kopieren"
         className="h-8 max-w-[34px] px-1 rounded-md bg-white/10 hover:bg-white/20 text-xs text-white/80 outline-none cursor-pointer"
       >
         <option value="">⇢</option>
-        {otherPads.map(p => (
-          <option key={p.id} value={p.id}>
-            → {p.name}
-          </option>
-        ))}
+        <optgroup label="Verschieben nach">
+          {otherPads.map(p => (
+            <option key={`m-${p.id}`} value={`move:${p.id}`}>
+              → {p.name}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Kopieren nach (Datei wird geteilt)">
+          {otherPads.map(p => (
+            <option key={`c-${p.id}`} value={`copy:${p.id}`}>
+              ⧉ {p.name}
+            </option>
+          ))}
+        </optgroup>
       </select>
       <button onClick={remove} title="Sound löschen" className="w-8 h-8 rounded-md hover:bg-red-500/20 text-white/50 hover:text-red-400 text-sm">
         🗑

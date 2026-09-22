@@ -106,12 +106,39 @@ async function main() {
     await card('Ass').locator('button[title="Nach unten"]').first().click();
     b = await board();
     ok(b.rows[0].pads[0].clips.map(c => c.name).join(',') === 'mittel,kurz', 'Sound nach unten sortiert', b.rows[0].pads[0].clips.map(c => c.name).join(','));
-    await card('Ass').locator('select[aria-label="In einen anderen Button verschieben"]').first().selectOption({ label: '→ Block' });
+    await card('Ass').locator('select[aria-label="In einen anderen Button verschieben oder kopieren"]').first().selectOption({ label: '→ Block' });
     await sleep(150);
     b = await board();
     ok(b.rows[0].pads[0].clips.length === 1 && b.rows[0].pads[1].clips.length === 2, 'Sound in anderen Button verschoben', `Ass=${b.rows[0].pads[0].clips.length} Block=${b.rows[0].pads[1].clips.length}`);
-    await card('Block').locator('select[aria-label="In einen anderen Button verschieben"]').last().selectOption({ label: '→ Ass' });
+    await card('Block').locator('select[aria-label="In einen anderen Button verschieben oder kopieren"]').last().selectOption({ label: '→ Ass' });
     await sleep(150);
+
+    console.log('\n3b) Kopieren – Datei wird geteilt');
+    {
+      const fileIds = () => p.evaluate(() => new Promise(res => { const r = indexedDB.open('vbdj-v2'); r.onsuccess = () => { const k = r.result.transaction('files').objectStore('files').getAllKeys(); k.onsuccess = () => res(k.result.length); }; }));
+      const before = await fileIds();
+      const counts = () => board().then(x => x.rows[0].pads.map(y => y.clips.length).join(','));
+      const countsBefore = await counts();
+      const original = (await board()).rows[0].pads[2].clips[0];
+      await card('Mix').locator('select[aria-label="In einen anderen Button verschieben oder kopieren"]').first().selectOption({ label: '⧉ Block' });
+      await sleep(250);
+      b = await board();
+      const copy = b.rows[0].pads[1].clips.at(-1);
+      ok(copy?.fileId === original.fileId && copy.id !== original.id, 'Kopie liegt im Zielbutton und teilt die Audiodatei');
+      ok(b.rows[0].pads[2].clips.length === 3, 'Das Original bleibt, wo es war');
+      ok((await fileIds()) === before, 'Kopieren belegt keinen zusätzlichen Speicher');
+      // Kopie wieder loeschen: die Datei muss bleiben, weil das Original sie noch braucht
+      await card('Block').locator('button[title="Sound löschen"]').last().click();
+      await sleep(300);
+      const survived = await p.evaluate(id => new Promise(res => { const r = indexedDB.open('vbdj-v2'); r.onsuccess = () => { const g = r.result.transaction('files').objectStore('files').get(id); g.onsuccess = () => res(!!g.result); }; }), original.fileId);
+      ok(survived, 'Löschen der Kopie nimmt dem Original die Datei nicht weg');
+      ok((await counts()) === countsBefore, 'Ausgangszustand wiederhergestellt', `${countsBefore} → ${await counts()}`);
+    }
+
+    console.log('\n3c) Farbauswahl');
+    ok((await card('Ass').locator('[role=radiogroup][aria-label="Tastenfarbe"] button').count()) === 7, 'Sieben Farben zur Auswahl');
+    await card('Ass').locator('button[title="Hellblau"]').click();
+    ok((await board()).rows[0].pads[0].color === '#0093d8', 'Hellblau gespeichert');
 
     console.log('\n4) Lautstärke je Sound');
     await card('Mix').locator('button:has-text("✂ Cue")').last().click(); // "leise"
@@ -218,6 +245,23 @@ async function main() {
     const mix = b.rows.flatMap(r => r.pads).find(x => x.name === 'Mix');
     ok(b.rows.length === 2 && mix?.playback === 'shuffle' && mix.clips.length === 3 && mix.clips[2].gain === 0.5, 'Export/Import erhält Zeilen, Modi und Lautstärke', `rows=${b.rows.length} mix=${mix?.playback}/${mix?.clips.length}`);
     ok(b.rows[0].pads[0].description === 'z.B. kurzer Aufschlag, Lob', 'Export/Import erhält die Beschreibung');
+
+    console.log('\n9b) Nach der letzten Verwendung wird die Datei gelöscht');
+    {
+      await goDev();
+      const firstCard = p.locator('div.rounded-2xl').filter({ has: p.locator('button[title="Sound löschen"]') }).first();
+      const padName = await firstCard.locator('[aria-label="Beschriftung des Buttons"]').inputValue();
+      const target = (await board()).rows.flatMap(r => r.pads).find(x => x.name === padName);
+      const fileId = target.clips[0].fileId;
+      const others = (await board()).rows.flatMap(r => r.pads).flatMap(x => x.clips).filter(c => c.fileId === fileId);
+      for (let i = 0; i < others.length; i++) {
+        const row = p.locator('div.rounded-lg').filter({ has: p.locator(`input[value="${others[i].name}"]`) }).first();
+        await row.locator('button[title="Sound löschen"]').click();
+        await sleep(250);
+      }
+      const gone = await p.evaluate(id => new Promise(res => { const r = indexedDB.open('vbdj-v2'); r.onsuccess = () => { const g = r.result.transaction('files').objectStore('files').get(id); g.onsuccess = () => res(!g.result); }; }), fileId);
+      ok(gone, 'Audiodatei verschwindet, wenn kein Sound sie mehr nutzt', `${others.length} Verwendung(en) gelöscht`);
+    }
 
     console.log('\n10) Bildschirm wachhalten');
     ok(await p.evaluate(() => 'wakeLock' in navigator), 'Wake-Lock-API vorhanden');

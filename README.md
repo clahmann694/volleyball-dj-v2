@@ -7,7 +7,7 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 **Beim Start** fragt die App, für welche Mannschaft du auflegst – Herren 1 oder Damen 1. Danach siehst du nur die Tasten dieser Mannschaft. Wechseln geht jederzeit über die Mannschaft oben rechts.
 
 **DJ-Ansicht** (im Spiel)
-- Gleich große 3D-Tasten in sechs Farben (Rot, Orange, Gelb, Grün, Blau, Lila), frei beschriftbar – „Block", „Ass", „krasser Angriff"; passen mehr Tasten in eine Zeile, als nebeneinander Platz haben, wird umgebrochen
+- Gleich große 3D-Tasten in sieben Farben (Rot, Orange, Gelb, Grün, Hellblau, Blau, Lila), frei beschriftbar – „Block", „Ass", „krasser Angriff"; passen mehr Tasten in eine Zeile, als nebeneinander Platz haben, wird umgebrochen
 - Tippen spielt den Sound, nochmal tippen stoppt. Tasten mit mehreren Sounds wählen zufällig – oder du wählst gezielt in der Seitenleiste.
 - Je Taste einstellbar: **Einzeln** (ein Sound, dann Stille), **Der Reihe nach** (Playlist, läuft endlos) oder **Zufällig endlos** (nie zweimal derselbe hintereinander)
 - Transportleiste: was läuft, Restzeit, **Pause/Weiter**, **Fade out**, großer **STOP**-Button (am Mac auch Leertaste), Lautstärke
@@ -21,7 +21,7 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 - Der Wechsel in die Dev-Ansicht fragt vorher nach – dort lässt sich alles ändern und löschen
 - **Cue-Points** setzen: Wellenform, Klick = Start, Shift-Klick = Ende, Marker ziehen, Vorschau
 - **Lautstärke je Sound** mit Pegelmessung und „Angleichen" – damit nicht jeder Song anders laut ist
-- Sounds innerhalb einer Taste sortieren oder in eine andere Taste verschieben
+- Sounds innerhalb einer Taste sortieren, in eine andere Taste verschieben – oder dorthin kopieren, wenn ein Lied an zwei Stellen gebraucht wird (die Datei liegt trotzdem nur einmal im Speicher)
 - Audiodatei eines Sounds austauschen („⟲ Datei") – Name, Cue-Points und Lautstärke bleiben
 - Komplette Einrichtung als `.vbdj`-Bundle exportieren/importieren (Buttons + Cue-Points + Audiodateien)
 
