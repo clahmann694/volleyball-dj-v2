@@ -9,7 +9,7 @@ Soundboard-Web-App zum Auflegen bei Volleyball-Spielen – für Mac und iPad. Na
 **DJ-Ansicht** (im Spiel)
 - Gleich große 3D-Tasten in sieben Farben (Rot, Orange, Gelb, Grün, Hellblau, Blau, Lila), frei beschriftbar – „Block", „Ass", „krasser Angriff"; passen mehr Tasten in eine Zeile, als nebeneinander Platz haben, wird umgebrochen
 - Tippen spielt den Sound, nochmal tippen stoppt. Tasten mit mehreren Sounds wählen zufällig – oder du wählst gezielt in der Seitenleiste.
-- Je Taste einstellbar: **Einzeln** (ein Sound, dann Stille), **Der Reihe nach** (Playlist, läuft endlos) oder **Zufällig endlos** (nie zweimal derselbe hintereinander)
+- Je Taste einstellbar: **Einzeln** (ein Sound, dann Stille), **Dauerschleife** (ein kurzer Clip wiederholt sich nahtlos), **Der Reihe nach** (Playlist, läuft endlos) oder **Zufällig endlos** (nie zweimal derselbe hintereinander)
 - Transportleiste: was läuft, Restzeit, **Pause/Weiter**, **Fade out**, großer **STOP**-Button (am Mac auch Leertaste), Lautstärke
 - Der Bildschirm bleibt im Spielbetrieb an
 

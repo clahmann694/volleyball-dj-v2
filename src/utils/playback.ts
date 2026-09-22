@@ -7,9 +7,15 @@ export function firstClip(pad: SoundPad): SoundClip | undefined {
   return randomClip(pad.clips, null);
 }
 
+/** Wiederholt der Audio-Motor den Sound selbst (nahtlos)? */
+export function isLooping(pad: SoundPad): boolean {
+  return pad.playback === 'loop';
+}
+
 /** Welcher Sound folgt, wenn `currentId` von selbst zu Ende ist? undefined = Stille. */
 export function nextClip(pad: SoundPad, currentId: string): SoundClip | undefined {
-  if (pad.playback === 'single' || pad.clips.length === 0) return undefined;
+  // Bei 'loop' wiederholt Howler selbst - hier gibt es nichts nachzustarten
+  if (pad.playback === 'single' || pad.playback === 'loop' || pad.clips.length === 0) return undefined;
   if (pad.playback === 'sequence') {
     const i = pad.clips.findIndex(c => c.id === currentId);
     return pad.clips[(i + 1) % pad.clips.length];

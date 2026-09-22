@@ -2,7 +2,7 @@ import { CSSProperties } from 'react';
 import { SoundPad as SoundPadModel } from '../../types';
 import { useAudio } from '../../contexts/AudioContext';
 import { padTextColor } from '../../config/defaultBoard';
-import { firstClip } from '../../utils/playback';
+import { firstClip, isLooping } from '../../utils/playback';
 
 interface Props {
   pad: SoundPadModel;
@@ -27,9 +27,9 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
       return;
     }
     const clip = firstClip(pad);
-    if (clip) play(pad.id, clip);
+    if (clip) play(pad.id, clip, undefined, undefined, isLooping(pad));
   };
-  const modeHint = pad.playback === 'sequence' ? '⟳' : pad.playback === 'shuffle' ? '⤮' : '';
+  const modeHint = pad.playback === 'loop' ? '∞' : pad.playback === 'sequence' ? '⟳' : pad.playback === 'shuffle' ? '⤮' : '';
 
   return (
     <div className="pad-wrap" style={style}>
@@ -51,7 +51,7 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
       </button>
 
       {modeHint && hasClips && (
-        <span className="absolute top-1 left-1.5 text-[13px] text-white/80 drop-shadow z-10" title={pad.playback === 'sequence' ? 'Spielt alle Sounds der Reihe nach' : 'Spielt alle Sounds in zufälliger Reihenfolge'}>
+        <span className="absolute top-1 left-1.5 text-[13px] text-white/80 drop-shadow z-10" title={pad.playback === 'loop' ? 'Läuft in Dauerschleife, bis gestoppt wird' : pad.playback === 'sequence' ? 'Spielt alle Sounds der Reihe nach' : 'Spielt alle Sounds in zufälliger Reihenfolge'}>
           {modeHint}
         </span>
       )}

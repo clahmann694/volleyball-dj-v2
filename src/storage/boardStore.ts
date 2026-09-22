@@ -15,7 +15,7 @@ interface LegacyBoardV1 { version: 1; groups: LegacyGroup[] }
 interface LegacyBoardV2 { version: 2; pads: SoundPad[] }
 
 interface LegacyRows { version: 3 | 4 | 5; rows: { id: string; pads: Partial<SoundPad>[] }[] }
-const PLAYBACK_MODES: PlaybackMode[] = ['single', 'sequence', 'shuffle'];
+const PLAYBACK_MODES: PlaybackMode[] = ['single', 'loop', 'sequence', 'shuffle'];
 
 /** Spalten des iPad-Rasters vor v3 - so bleibt die gewohnte Anordnung erhalten */
 const V2_ROW_LENGTH = 6;

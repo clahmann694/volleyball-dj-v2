@@ -19,6 +19,7 @@ const ACCEPT = 'audio/*,video/mp4,video/quicktime,video/x-m4v,.mp3,.m4a,.wav,.og
 /** Ein Button in der Dev-Ansicht: Farbe, Name, Position, Sounds. */
 const MODES: Array<{ id: PlaybackMode; label: string; hint: string }> = [
   { id: 'single', label: 'Einzeln', hint: 'Ein Sound (bei mehreren zufällig), danach Stille – für Jingles' },
+  { id: 'loop', label: 'Dauerschleife', hint: 'Ein Sound wiederholt sich nahtlos, bis du STOP drückst – für kurze Clips' },
   { id: 'sequence', label: 'Der Reihe nach', hint: 'Alle Sounds nacheinander, dann von vorn – für Playlists' },
   { id: 'shuffle', label: 'Zufällig endlos', hint: 'Alle Sounds in zufälliger Reihenfolge, ohne direkte Wiederholung' },
 ];

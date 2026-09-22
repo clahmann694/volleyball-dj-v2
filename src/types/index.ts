@@ -24,10 +24,11 @@ export interface SoundClip {
 /**
  * Was passiert, wenn ein Button gedrueckt wird:
  * single   - ein (zufaelliger) Sound, danach Stille (Jingles)
+ * loop     - ein Sound laeuft nahtlos in Dauerschleife, bis gestoppt wird
  * sequence - alle Sounds der Reihe nach, dann von vorn (Warm-up-Playlist)
  * shuffle  - alle Sounds in zufaelliger Reihenfolge ohne direkte Wiederholung, endlos
  */
-export type PlaybackMode = 'single' | 'sequence' | 'shuffle';
+export type PlaybackMode = 'single' | 'loop' | 'sequence' | 'shuffle';
 
 /** Mannschaft, für die aufgelegt wird. */
 export type TeamId = 'herren' | 'damen';

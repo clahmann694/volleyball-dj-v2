@@ -215,6 +215,39 @@ async function main() {
     await sleep(300);
     ok((await footer()).startsWith('Bereit'), 'Leertaste stoppt');
 
+    console.log('\n6b) Dauerschleife');
+    {
+      await goDev();
+      await card('Block').locator('button[role=radio]:has-text("Dauerschleife")').click();
+      await sleep(150);
+      ok((await board()).rows[0].pads[1].playback === 'loop', 'Modus „Dauerschleife“ gespeichert');
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d');
+      await p.click('button.pad3d:has-text("Block")');
+      // "lang" ist 8 s - laenger beobachten als der Clip dauert
+      const trace = await p.evaluate(async () => {
+        const out = [];
+        const t0 = performance.now();
+        while (performance.now() - t0 < 10000) {
+          const f = (document.querySelector('footer')?.innerText || '').replace(/\s+/g, ' ');
+          out.push(/-\d:\d\d/.test(f) && !f.startsWith('Bereit'));
+          await new Promise(r => setTimeout(r, 150));
+        }
+        return out;
+      });
+      const gaps = trace.filter(x => !x).length;
+      ok(gaps === 0, 'Läuft über das Clip-Ende hinaus ohne Aussetzer weiter', `${trace.length} Messungen, ${gaps} Lücken`);
+      ok((await p.locator('button.pad3d--active').count()) === 1, 'Taste bleibt durchgehend aktiv');
+      await p.keyboard.press('Space');
+      await sleep(300);
+      ok((await footer()).startsWith('Bereit'), 'STOP beendet die Schleife');
+      await goDev();
+      await card('Block').locator('button[role=radio]:has-text("Einzeln")').click();
+      await sleep(150);
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d');
+    }
+
     console.log('\n7) Einzeln: nach dem Sound Stille');
     await p.click('button.pad3d:has-text("Block")');
     await p.waitForFunction(() => document.querySelector('footer')?.innerText.includes('-0:'), null, { timeout: 5000 });

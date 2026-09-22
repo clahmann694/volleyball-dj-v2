@@ -39,7 +39,7 @@ type AudioAction =
   | { type: 'CLEAR_ERROR' };
 
 interface AudioContextType extends AudioState {
-  play: (padId: string, clip: SoundClip, cueOverride?: CuePoint, gainOverride?: number) => void;
+  play: (padId: string, clip: SoundClip, cueOverride?: CuePoint, gainOverride?: number, loop?: boolean) => void;
   pause: () => void;
   resume: () => void;
   stopAll: () => void;
@@ -164,7 +164,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   }, [teardown]);
 
   const play = useCallback(
-    async (padId: string, clip: SoundClip, cueOverride?: CuePoint, gainOverride?: number) => {
+    async (padId: string, clip: SoundClip, cueOverride?: CuePoint, gainOverride?: number, loop = false) => {
       const token = ++tokenRef.current;
       teardown();
       const cue = cueOverride ?? clip.cue;
@@ -206,7 +206,10 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         html5: true,
         format: [howlerFormat(clip.fileName, clip.mimeType)],
         volume: volumeRef.current * gain,
-        sprite: useSprite ? { clip: [start * 1000, (end - start) * 1000] } : undefined,
+        // Dritter Wert im Sprite = Schleife; ohne Cue-Points loopt Howler die ganze Datei.
+        // Das wiederholt derselbe Howl nahtlos - ein Neustart je Durchlauf haette eine hoerbare Luecke.
+        loop: !useSprite && loop,
+        sprite: useSprite ? { clip: [start * 1000, (end - start) * 1000, loop] } : undefined,
         onplay: () => {
           dispatch({ type: 'PLAYING', isPlaying: true });
           startTicking();
@@ -215,7 +218,12 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'PLAYING', isPlaying: false });
           stopTicking();
         },
-        onend: ended,
+        // Howler meldet das Ende auch bei jedem Schleifendurchlauf - dann laeuft es
+        // von selbst weiter und es darf nichts abgeraeumt werden.
+        onend: () => {
+          if (loop) return;
+          ended();
+        },
         onstop: finish,
         onloaderror: (_id, err) => {
           console.warn('Audio konnte nicht geladen werden', err);
