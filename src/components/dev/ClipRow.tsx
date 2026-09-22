@@ -1,5 +1,5 @@
 import { ChangeEvent, useRef, useState } from 'react';
-import { allPads, SoundClip } from '../../types';
+import { allPads, PlaybackMode, SoundClip } from '../../types';
 import { useBoard } from '../../contexts/BoardContext';
 import { useAudio } from '../../contexts/AudioContext';
 import { formatTime } from '../../utils/formatTime';
@@ -8,12 +8,14 @@ import { formatBytes } from '../../utils/audioFormat';
 interface Props {
   clip: SoundClip;
   padId: string;
+  /** Wiedergabemodus des Buttons - nur bei 'sequence' zaehlt die Reihenfolge */
+  playback: PlaybackMode;
   index: number;
   total: number;
   onEdit: () => void;
 }
 
-export function ClipRow({ clip, padId, index, total, onEdit }: Props) {
+export function ClipRow({ clip, padId, playback, index, total, onEdit }: Props) {
   const { board, updateClip, replaceClipFile, moveClip, moveClipToPad, copyClipToPad, deleteClip } = useBoard();
   const fileInput = useRef<HTMLInputElement>(null);
   const [replacing, setReplacing] = useState<'busy' | 'done' | 'error' | null>(null);
@@ -88,10 +90,15 @@ export function ClipRow({ clip, padId, index, total, onEdit }: Props) {
         title="Audiodatei austauschen – Name, Cue-Points und Lautstärke bleiben erhalten (z. B. um ein Reel in bester Qualität neu zu übernehmen)"
         className={`h-8 px-2 rounded-md text-xs whitespace-nowrap ${replacing === 'done' ? 'bg-vsg-green/30 text-vsg-green' : replacing === 'error' ? 'bg-red-500/30 text-red-300' : 'bg-white/10 hover:bg-white/20 text-white/80'}`}
       >
-        {replacing === 'busy' ? '…' : replacing === 'done' ? '✓ ersetzt' : replacing === 'error' ? 'Fehler' : '⟲ Datei'}
+        {replacing === 'busy' ? '…' : replacing === 'done' ? '✓ ersetzt' : replacing === 'error' ? 'Fehler' : '⟲ Ersetzen'}
       </button>
-      <button onClick={() => moveClip(clip.id, -1)} disabled={index === 0} title="Nach oben" className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-25 text-xs">↑</button>
-      <button onClick={() => moveClip(clip.id, 1)} disabled={index === total - 1} title="Nach unten" className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-25 text-xs">↓</button>
+      {/* Reihenfolge zaehlt nur im Modus "Der Reihe nach" - sonst waeren die Pfeile nur Beiwerk */}
+      {playback === 'sequence' && (
+        <>
+          <button onClick={() => moveClip(clip.id, -1)} disabled={index === 0} title="Nach oben" className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-25 text-xs">↑</button>
+          <button onClick={() => moveClip(clip.id, 1)} disabled={index === total - 1} title="Nach unten" className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-25 text-xs">↓</button>
+        </>
+      )}
       <select
         value=""
         onChange={e => {

@@ -156,7 +156,7 @@ export function PadCard({ pad, rowIndex, onEditClip }: Props) {
 
       <div className="space-y-1.5">
         {pad.clips.map((clip, i) => (
-          <ClipRow key={clip.id} clip={clip} padId={pad.id} index={i} total={pad.clips.length} onEdit={() => onEditClip(clip.id)} />
+          <ClipRow key={clip.id} clip={clip} padId={pad.id} playback={pad.playback} index={i} total={pad.clips.length} onEdit={() => onEditClip(clip.id)} />
         ))}
         {pad.clips.length === 0 && <p className="text-xs text-white/40 px-1">Noch keine Sounds – Audio- oder Videodateien hinzufügen oder hierher ziehen.</p>}
       </div>

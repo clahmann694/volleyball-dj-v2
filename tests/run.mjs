@@ -113,6 +113,10 @@ async function main() {
     await card('Block').locator('select[aria-label="In einen anderen Button verschieben oder kopieren"]').last().selectOption({ label: '→ Ass' });
     await sleep(150);
 
+    // Ass steht auf "Der Reihe nach", Mix auf "Zufällig endlos"
+    ok((await card('Ass').locator('button[title="Nach oben"]').count()) === 2, 'Sortierpfeile nur bei „Der Reihe nach“');
+    ok((await card('Mix').locator('button[title="Nach oben"]').count()) === 0, 'Keine Sortierpfeile bei zufälliger Wiedergabe');
+
     console.log('\n3b) Kopieren – Datei wird geteilt');
     {
       const fileIds = () => p.evaluate(() => new Promise(res => { const r = indexedDB.open('vbdj-v2'); r.onsuccess = () => { const k = r.result.transaction('files').objectStore('files').getAllKeys(); k.onsuccess = () => res(k.result.length); }; }));
