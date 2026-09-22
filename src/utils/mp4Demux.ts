@@ -71,6 +71,20 @@ function find(boxes: Box[], type: string): Box | undefined {
   return boxes.find(b => b.type === type);
 }
 
+/** Abtastraten laut ISO/IEC 14496-3, Index aus dem AudioSpecificConfig */
+const ASC_RATES = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+
+/** Rate und Kanalzahl aus dem AudioSpecificConfig - zuverlaessiger als die Container-Angaben. */
+function parseAsc(asc: Uint8Array): { sampleRate: number | null; channels: number | null } {
+  if (asc.length < 2) return { sampleRate: null, channels: null };
+  const freqIndex = ((asc[0] & 0x07) << 1) | (asc[1] >> 7);
+  const channelConfig = (asc[1] >> 3) & 0x0f;
+  return {
+    sampleRate: freqIndex < ASC_RATES.length ? ASC_RATES[freqIndex] : null,
+    channels: channelConfig > 0 && channelConfig <= 8 ? channelConfig : null,
+  };
+}
+
 /** ES-Descriptor durchlaufen und die DecoderSpecificInfo (Tag 0x05) holen. */
 function readAudioSpecificConfig(bytes: Uint8Array): Uint8Array | null {
   let p = 4; // Version + Flags
@@ -144,12 +158,25 @@ export async function extractAacTrack(file: Blob): Promise<AacTrack | null> {
       const entries = readBoxes(view, stsd.body + 8, stsd.end);
       const mp4a = entries.find(b => b.type === 'mp4a');
       if (!mp4a) continue;
-      const channels = view.getUint16(mp4a.body + 16);
-      const sampleRate = view.getUint16(mp4a.body + 24); // 16.16-Festkomma, ganzzahliger Teil
-      const esds = find(readBoxes(view, mp4a.body + 28, mp4a.end), 'esds');
+
+      // Die Sample-Description gibt es in drei Fassungen; QuickTime/iOS nutzt
+      // Version 1 mit 16 zusaetzlichen Bytes vor den Unterboxen.
+      const sdVersion = view.getUint16(mp4a.body + 8);
+      const extra = sdVersion === 1 ? 16 : sdVersion === 2 ? 36 : 0;
+      const kids = readBoxes(view, mp4a.body + 28 + extra, mp4a.end);
+      // QuickTime verpackt esds zusaetzlich in eine wave-Box
+      let esds = find(kids, 'esds');
+      if (!esds) {
+        const wave = find(kids, 'wave');
+        if (wave) esds = find(readBoxes(view, wave.body, wave.end), 'esds');
+      }
       if (!esds) continue;
       const description = readAudioSpecificConfig(bytes.slice(esds.body, esds.end));
       if (!description || description.length < 2) continue;
+
+      const asc = parseAsc(description);
+      const channels = asc.channels ?? view.getUint16(mp4a.body + 16);
+      const sampleRate = asc.sampleRate ?? view.getUint16(mp4a.body + 24); // 16.16-Festkomma
 
       // --- Tabellen ---
       const stts = find(s, 'stts');

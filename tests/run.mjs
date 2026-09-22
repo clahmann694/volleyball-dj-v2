@@ -7,8 +7,11 @@
  * Zeitmessung, Pause/Weiter, Auto-Weiterspielen, Lautstaerke, Sortieren,
  * Ziehen, Export/Import, Migration. Beendet sich mit Exit-Code 1 bei Fehlern.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { chromium } from 'playwright-core';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { createFixtures } from './fixtures.mjs';
 
 const PORT = 3100;
@@ -265,6 +268,26 @@ async function main() {
       }
       const gone = await p.evaluate(id => new Promise(res => { const r = indexedDB.open('vbdj-v2'); r.onsuccess = () => { const g = r.result.transaction('files').objectStore('files').get(id); g.onsuccess = () => res(!g.result); }; }), fileId);
       ok(gone, 'Audiodatei verschwindet, wenn kein Sound sie mehr nutzt', `${others.length} Verwendung(en) gelöscht`);
+    }
+
+    console.log('\n9c) Bildschirmaufnahme (.mov, QuickTime-Layout)');
+    {
+      // iOS-Bildschirmaufnahmen sind .mov mit Sample-Description Version 1 und
+      // esds in einer wave-Box. Braucht ffmpeg zum Erzeugen - sonst uebersprungen.
+      const hasFfmpeg = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0;
+      if (!hasFfmpeg) {
+        console.log('  – übersprungen (ffmpeg nicht installiert)');
+      } else {
+        const mov = join(tmpdir(), 'vbdj-tests', 'screenrec.mov');
+        spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=320x320:r=15', '-i', fx.lang, '-t', '5', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-b:a', '128k', '-pix_fmt', 'yuv420p', '-f', 'mov', mov]);
+        const data = Array.from(readFileSync(mov));
+        const r = await p.evaluate(async d => {
+          const t = await import('/src/utils/audioTranscode.ts');
+          const res = await t.remuxAudioTrack(new Blob([new Uint8Array(d)], { type: 'video/quicktime' }));
+          return res ? { ok: true, dur: +res.duration.toFixed(1), rate: res.sampleRate, ch: res.channels } : { ok: false };
+        }, data);
+        ok(r.ok && r.rate === 44100, 'Tonspur einer .mov-Aufnahme wird verlustfrei übernommen', JSON.stringify(r));
+      }
     }
 
     console.log('\n10) Bildschirm wachhalten');
