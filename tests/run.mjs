@@ -77,6 +77,9 @@ async function main() {
     await p.click('header button:has-text("Dev")');
     const dialog = p.locator('[role=alertdialog]');
     if (await dialog.count()) await dialog.locator('button:has-text("Ja, zur Dev-Ansicht")').click();
+    // Auf einem Geraet ohne Sounds kommt zuerst die Startansicht
+    const start = p.locator('button:has-text("Buttons anzeigen")');
+    if (await start.count()) await start.click();
     await p.waitForSelector('text=Einrichtung');
   };
   const footer = () => p.locator('footer').innerText().then(t => t.replace(/\s+/g, ' '));
@@ -107,6 +110,22 @@ async function main() {
     await p.click('header button:has-text("Dev")');
     await p.keyboard.press('Escape');
     ok((await p.locator('[role=alertdialog]').count()) === 0, 'Escape schließt die Abfrage');
+
+    console.log('\n1c) Startansicht ohne Sounds');
+    await p.click('header button:has-text("Dev")');
+    await p.click('[role=alertdialog] button:has-text("Ja, zur Dev-Ansicht")');
+    await p.waitForSelector('text=Noch keine Sounds auf diesem Gerät');
+    ok(
+      (await p.locator('button:has-text("Exportieren")').count()) === 0 &&
+        (await p.locator('section[aria-label="Anordnung"]').count()) === 0 &&
+        (await p.locator('[aria-label="Tastenfarbe"]').count()) === 0,
+      'Kein Einstellungs-Wirrwarr beim ersten Mal'
+    );
+    ok((await p.locator('[data-pad-id]').count()) === 0, 'Keine leeren Beispiel-Buttons');
+    ok((await p.locator('[data-role="import-bundle"]').count()) === 1, 'Einrichtung laden wird angeboten');
+    await p.click('button:has-text("Buttons anzeigen")');
+    await p.waitForSelector('text=Einrichtung');
+    ok((await p.locator('[data-pad-id]').count()) === 3, 'Nach „Buttons anzeigen“ die gewohnte Ansicht');
 
     console.log('\n2) Import + Wiedergabemodus');
     await goDev();

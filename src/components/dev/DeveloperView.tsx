@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { TeamId } from '../../types';
+import { allPads, TeamId } from '../../types';
 import { useBoard } from '../../contexts/BoardContext';
 import { PAD_COLORS } from '../../config/defaultBoard';
 import { ALL_TEAM_IDS, TEAMS } from '../../config/teams';
@@ -8,6 +8,7 @@ import { LayoutEditor } from './LayoutEditor';
 import { PadCard } from './PadCard';
 import { CuePointEditor } from './CuePointEditor';
 import { ColorSwatches } from './ColorSwatches';
+import { EmptyState } from './EmptyState';
 
 interface Props {
   editingClipId: string | null;
@@ -24,6 +25,11 @@ export function DeveloperView({ editingClipId, onEditClip, onCloseEditor }: Prop
   const editing = editingClipId ? clipIndex.get(editingClipId) : undefined;
   // null = beide Mannschaften zeigen
   const [filter, setFilter] = useState<TeamId | null>(null);
+  // Ohne einen einzigen Sound waeren 23 leere Buttons nur verwirrend
+  const [showBoard, setShowBoard] = useState(false);
+  const hasAnySound = allPads(board).some(p => p.clips.length > 0);
+
+  if (!hasAnySound && !showBoard) return <EmptyState onShowBoard={() => setShowBoard(true)} />;
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
