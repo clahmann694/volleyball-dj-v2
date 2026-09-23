@@ -102,6 +102,9 @@ tests can touch that. What CAN destroy her data – never do these without an ex
 - "Zurücksetzen" and bundle import replace everything on that device (both `window.confirm`).
 The Dev view shows an export-reminder (amber when changed since last export); the `.vbdj` export is her only
 backup – keep export/import backwards compatible.
+With no sounds anywhere, the **Dev view shows `EmptyState` instead of the editor**: just "load a setup (.vbdj)" and
+"show the buttons". 23 empty default pads plus every setting were confusing on a fresh device (her words, 2026-09-23).
+`showBoard` is local state, so the editor is one click away and the empty state returns after a reload while still empty.
 A device with no sounds at all gets a banner in the DJ view explaining that sounds are per device and how to
 transfer a bundle (she once AirDropped the *link* to the iPad and thought the app had lost her buttons – 2026-09-21).
 **Updates are only picked up on page load.** A tab open for hours stays on its build; that is intended (no periodic
