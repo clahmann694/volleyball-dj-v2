@@ -47,6 +47,31 @@ async function main() {
   p.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 120)); });
   p.on('dialog', d => d.accept());
   const board = () => p.evaluate(() => JSON.parse(localStorage.getItem('vbdj-v2-board')));
+  /** Klick auf ein Pad; bei Fehlschlag wird der Zustand ausgegeben (Diagnose flakiger Laeufe) */
+  const clickPad = async name => {
+    const loc = p.locator(`button.pad3d:has-text("${name}")`).first();
+    try {
+      await loc.click({ timeout: 10000 });
+    } catch (e) {
+      const diag = await p.evaluate(n => {
+        const el = [...document.querySelectorAll('button.pad3d')].find(b => b.innerText.includes(n));
+        if (!el) return { fehler: 'Pad nicht im DOM' };
+        const r = el.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return {
+          rect: [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)],
+          darueber: top ? `${top.tagName}.${top.className}`.slice(0, 80) : 'nichts',
+          imViewport: r.top >= 0 && r.bottom <= innerHeight,
+          dialogOffen: !!document.querySelector('[role=alertdialog]'),
+          fixeOverlays: [...document.querySelectorAll('.fixed')].map(x => String(x.className).slice(0, 50)),
+          scrollY: Math.round(scrollY),
+        };
+      }, name);
+      console.log('  ! Klick auf Pad "' + name + '" fehlgeschlagen. Zustand: ' + JSON.stringify(diag));
+      throw e;
+    }
+  };
+
   /** DJ -> Dev geht nur ueber die Sicherheitsabfrage */
   const goDev = async () => {
     await p.click('header button:has-text("Dev")');
@@ -181,7 +206,7 @@ async function main() {
     const reihe = b.rows[0].pads[0].clips; // Ass: Reihenfolge nach Schritt 3
     const dauer = { kurz: 1.5, mittel: 2.5 };
     const t0 = Date.now();
-    await p.click('button.pad3d:has-text("Ass")');
+    await clickPad('Ass');
     await p.waitForFunction(() => /-\d:\d\d/.test(document.querySelector('footer')?.innerText || ''), null, { timeout: 5000 });
     const startMs = Date.now() - t0;
     ok(startMs < 1500, 'Sound startet', `${startMs} ms`);
@@ -223,7 +248,7 @@ async function main() {
       ok((await board()).rows[0].pads[1].playback === 'loop', 'Modus „Dauerschleife“ gespeichert');
       await p.click('header button:has-text("DJ")');
       await p.waitForSelector('button.pad3d');
-      await p.click('button.pad3d:has-text("Block")');
+      await clickPad('Block');
       // "lang" ist 8 s - laenger beobachten als der Clip dauert
       const trace = await p.evaluate(async () => {
         const out = [];
@@ -249,13 +274,13 @@ async function main() {
     }
 
     console.log('\n7) Einzeln: nach dem Sound Stille');
-    await p.click('button.pad3d:has-text("Block")');
+    await clickPad('Block');
     await p.waitForFunction(() => document.querySelector('footer')?.innerText.includes('-0:'), null, { timeout: 5000 });
     await p.waitForFunction(() => document.querySelector('footer')?.innerText.startsWith('Bereit'), null, { timeout: 12000 }).catch(() => {});
     ok((await footer()).startsWith('Bereit'), 'Modus "Einzeln" spielt nicht weiter');
 
     console.log('\n8) Zufällig endlos ohne direkte Wiederholung');
-    await p.click('button.pad3d:has-text("Mix")');
+    await clickPad('Mix');
     const seen = [];
     for (let i = 0; i < 6; i++) {
       await p.waitForFunction(prev => { const t = (document.querySelector('footer')?.innerText || '').replace(/\s+/g, ' '); const m = t.match(/Mix · (\S+)/); return !!m && m[1] !== prev; }, seen[seen.length - 1] ?? null, { timeout: 6000 }).catch(() => {});

@@ -56,18 +56,13 @@ button {
     border: 0;
     padding: 0;
     border-radius: 14px;
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--c) 72%, white) 0%,
-      var(--c) 18%,
-      var(--c) 78%,
-      color-mix(in srgb, var(--c) 72%, black) 100%
-    );
-    box-shadow:
-      0 14px 22px -8px rgba(0, 0, 0, 0.75),
-      0 4px 0 color-mix(in srgb, var(--c) 45%, black),
-      inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+    /* Einfache Fassung fuer alle Browser; die plastische Variante mit color-mix
+       steht weiter unten in einem @supports-Block. Ein blosser Rueckfall per
+       zweiter Deklaration genuegt NICHT: Enthaelt ein Wert var(), wird er erst
+       spaet geprueft, und ein ungueltiges Ergebnis setzt die Eigenschaft
+       komplett zurueck, statt auf die Zeile davor zurueckzufallen. */
+    background: var(--c);
+    box-shadow: 0 14px 22px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.55);
     transition: box-shadow 120ms, filter 120ms;
     cursor: pointer;
   }
@@ -86,18 +81,9 @@ button {
        bei einem Button ueber die volle Zeile wuerde es das Label auf 0 px druecken */
     padding: 6px 8%;
     overflow: hidden;
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--c) 68%, white) 0%,
-      var(--c) 32%,
-      var(--c) 70%,
-      color-mix(in srgb, var(--c) 86%, black) 100%
-    );
-    box-shadow:
-      0 8px 12px -3px rgba(0, 0, 0, 0.6),
-      inset 0 2px 1px rgba(255, 255, 255, 0.6),
-      inset 0 -4px 6px rgba(0, 0, 0, 0.35),
-      inset 0 0 0 1px color-mix(in srgb, var(--c) 65%, white);
+    background: var(--c);
+    filter: brightness(1.12);
+    box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.6), inset 0 2px 1px rgba(255, 255, 255, 0.6), inset 0 -4px 6px rgba(0, 0, 0, 0.35);
     transition: transform 80ms, box-shadow 80ms;
   }
 
@@ -169,11 +155,7 @@ button {
   .pad3d:not(:disabled):active .pad3d__cap,
   .pad3d--active .pad3d__cap {
     transform: translateY(7%);
-    box-shadow:
-      0 2px 3px -1px rgba(0, 0, 0, 0.6),
-      inset 0 2px 1px rgba(255, 255, 255, 0.45),
-      inset 0 -2px 4px rgba(0, 0, 0, 0.35),
-      inset 0 0 0 1px color-mix(in srgb, var(--c) 65%, white);
+    box-shadow: 0 2px 3px -1px rgba(0, 0, 0, 0.6), inset 0 2px 1px rgba(255, 255, 255, 0.45), inset 0 -2px 4px rgba(0, 0, 0, 0.35);
   }
 
   .pad3d--active {
@@ -182,11 +164,7 @@ button {
 
   .pad3d--active.pad3d--paused {
     animation: none;
-    box-shadow:
-      0 14px 22px -8px rgba(0, 0, 0, 0.75),
-      0 4px 0 color-mix(in srgb, var(--c) 45%, black),
-      inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      0 0 18px color-mix(in srgb, var(--c) 50%, transparent);
+    box-shadow: 0 14px 22px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.55);
   }
 
   .pad3d--empty {
@@ -216,18 +194,80 @@ button {
 @keyframes pad3d-glow {
   0%,
   100% {
-    box-shadow:
-      0 14px 22px -8px rgba(0, 0, 0, 0.75),
-      0 4px 0 color-mix(in srgb, var(--c) 45%, black),
-      inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      0 0 18px color-mix(in srgb, var(--c) 70%, transparent);
+    box-shadow: 0 14px 22px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 0 14px var(--c);
   }
   50% {
+    box-shadow: 0 14px 22px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 0 40px var(--c);
+  }
+}
+
+/* Plastisches Aussehen nur dort, wo color-mix wirklich funktioniert.
+   Aeltere Browser (z. B. Firefox vor 113) bekommen die einfarbigen Tasten oben. */
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .pad3d {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--c) 72%, white) 0%,
+      var(--c) 18%,
+      var(--c) 78%,
+      color-mix(in srgb, var(--c) 72%, black) 100%
+    );
     box-shadow:
       0 14px 22px -8px rgba(0, 0, 0, 0.75),
       0 4px 0 color-mix(in srgb, var(--c) 45%, black),
       inset 0 1px 0 rgba(255, 255, 255, 0.55),
-      0 0 40px var(--c);
+      inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  .pad3d__cap {
+    filter: none;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--c) 68%, white) 0%,
+      var(--c) 32%,
+      var(--c) 70%,
+      color-mix(in srgb, var(--c) 86%, black) 100%
+    );
+    box-shadow:
+      0 8px 12px -3px rgba(0, 0, 0, 0.6),
+      inset 0 2px 1px rgba(255, 255, 255, 0.6),
+      inset 0 -4px 6px rgba(0, 0, 0, 0.35),
+      inset 0 0 0 1px color-mix(in srgb, var(--c) 65%, white);
+  }
+
+  .pad3d:not(:disabled):active .pad3d__cap,
+  .pad3d--active .pad3d__cap {
+    box-shadow:
+      0 2px 3px -1px rgba(0, 0, 0, 0.6),
+      inset 0 2px 1px rgba(255, 255, 255, 0.45),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+      inset 0 0 0 1px color-mix(in srgb, var(--c) 65%, white);
+  }
+
+  .pad3d--active.pad3d--paused {
+    box-shadow:
+      0 14px 22px -8px rgba(0, 0, 0, 0.75),
+      0 4px 0 color-mix(in srgb, var(--c) 45%, black),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 0 18px color-mix(in srgb, var(--c) 50%, transparent);
+  }
+
+  @keyframes pad3d-glow {
+    0%,
+    100% {
+      box-shadow:
+        0 14px 22px -8px rgba(0, 0, 0, 0.75),
+        0 4px 0 color-mix(in srgb, var(--c) 45%, black),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        0 0 18px color-mix(in srgb, var(--c) 70%, transparent);
+    }
+    50% {
+      box-shadow:
+        0 14px 22px -8px rgba(0, 0, 0, 0.75),
+        0 4px 0 color-mix(in srgb, var(--c) 45%, black),
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        0 0 40px var(--c);
+    }
   }
 }
 
