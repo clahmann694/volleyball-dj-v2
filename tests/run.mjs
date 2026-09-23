@@ -367,7 +367,44 @@ async function main() {
       }
     }
 
-    console.log('\n10) Bildschirm wachhalten');
+    console.log('\n10) Erneutes Drücken wiederholt nie denselben Sound');
+    {
+      // Eigener Aufbau, damit dieser Test nicht von den Schritten davor abhaengt
+      await p.evaluate(() => localStorage.clear());
+      await p.reload();
+      await p.click('button:has-text("Herren 1")');
+      await goDev();
+      await p.locator('input[data-role="add-clips"]').first().setInputFiles([fx.kurz, fx.mittel, fx.leise]);
+      await p.waitForSelector('text=3 Dateien hinzugefügt');
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d:not(.pad3d--empty)');
+
+      const pad = p.locator('button.pad3d:not(.pad3d--empty)').first();
+      const gespielt = [];
+      for (let i = 0; i < 10; i++) {
+        await pad.click();
+        await p.waitForFunction(() => /· \S/.test((document.querySelector('footer')?.innerText || '').replace(/\s+/g, ' ')), null, { timeout: 6000 });
+        gespielt.push(await clipInFooter());
+        await p.keyboard.press('Space');
+        await sleep(200);
+      }
+      const wiederholt = gespielt.filter((x, i) => i > 0 && x === gespielt[i - 1]);
+      ok(wiederholt.length === 0, 'Zehnmal gedrückt, nie zweimal dasselbe Lied', gespielt.join(' → '));
+      ok(new Set(gespielt).size >= 2, 'Es wechselt wirklich zwischen den Sounds', `${new Set(gespielt).size} verschiedene`);
+
+      // Auch ein Ansichtswechsel darf das Gedaechtnis nicht loeschen
+      const zuletzt = gespielt[gespielt.length - 1];
+      await goDev();
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d:not(.pad3d--empty)');
+      await pad.click();
+      await p.waitForFunction(() => /· \S/.test((document.querySelector('footer')?.innerText || '').replace(/\s+/g, ' ')), null, { timeout: 6000 });
+      ok((await clipInFooter()) !== zuletzt, 'Auch nach einem Ansichtswechsel kein direktes Wiederholen', `${zuletzt} → ${await clipInFooter()}`);
+      await p.keyboard.press('Space');
+      await sleep(200);
+    }
+
+    console.log('\n11) Bildschirm wachhalten');
     ok(await p.evaluate(() => 'wakeLock' in navigator), 'Wake-Lock-API vorhanden');
   } finally {
     ok(errors.length === 0, 'Keine Fehler in der Konsole', errors.join(' | '));

@@ -45,6 +45,8 @@ interface AudioContextType extends AudioState {
   stopAll: () => void;
   /** Wird aufgerufen, wenn ein Sound von selbst zu Ende geht (nicht bei Stop/Fade) */
   subscribeEnded: (cb: (info: PlayingClip) => void) => () => void;
+  /** Welcher Sound lief bei dieser Taste zuletzt? (fuer „nie zweimal hintereinander") */
+  lastClipOf: (padId: string) => string | null;
   fadeOut: (ms?: number) => void;
   setVolume: (volume: number) => void;
   clearError: () => void;
@@ -119,6 +121,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   // Howler-Sound-ID des laufenden Sounds - noetig, um nach Pause an derselben Stelle fortzusetzen
   const soundIdRef = useRef<number | null>(null);
   const endedListeners = useRef(new Set<(info: PlayingClip) => void>());
+  // Je Taste der zuletzt gestartete Sound - bleibt auch nach dem Stoppen erhalten
+  const lastClipByPad = useRef(new Map<string, string>());
   // Laufnummer: verhindert, dass ein langsam geladener Sound einen neueren ueberholt
   const tokenRef = useRef(0);
 
@@ -171,6 +175,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       const gain = Math.min(1, Math.max(0, gainOverride ?? clip.gain ?? 1));
       gainRef.current = gain;
       const info: PlayingClip = { padId, clipId: clip.id };
+      lastClipByPad.current.set(padId, clip.id);
       dispatch({ type: 'START', playing: info, clipName: clip.name, cue, fileDuration: clip.duration });
 
       let stored;
@@ -267,6 +272,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'PAUSED', isPaused: false });
   }, []);
 
+  const lastClipOf = useCallback((padId: string) => lastClipByPad.current.get(padId) ?? null, []);
+
   const subscribeEnded = useCallback((cb: (info: PlayingClip) => void) => {
     endedListeners.current.add(cb);
     return () => {
@@ -297,8 +304,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const clearError = useCallback(() => dispatch({ type: 'CLEAR_ERROR' }), []);
 
   const value = useMemo<AudioContextType>(
-    () => ({ ...state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded }),
-    [state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded]
+    () => ({ ...state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, lastClipOf }),
+    [state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, lastClipOf]
   );
 
   return <AudioCtx.Provider value={value}>{children}</AudioCtx.Provider>;

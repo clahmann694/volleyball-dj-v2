@@ -15,7 +15,7 @@ interface Props {
  * Die Ecke oben rechts oeffnet die Liste aller Clips.
  */
 export function SoundPad({ pad, onOpenPanel }: Props) {
-  const { playing, isPaused, play, stopAll } = useAudio();
+  const { playing, isPaused, play, stopAll, lastClipOf } = useAudio();
   const isActive = playing?.padId === pad.id;
   const hasClips = pad.clips.length > 0;
   const style = { '--c': pad.color, '--t': padTextColor(pad.color) } as CSSProperties;
@@ -26,7 +26,7 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
       stopAll();
       return;
     }
-    const clip = firstClip(pad);
+    const clip = firstClip(pad, lastClipOf(pad.id));
     if (clip) play(pad.id, clip, undefined, undefined, isLooping(pad));
   };
   const modeHint = pad.playback === 'loop' ? '∞' : pad.playback === 'sequence' ? '⟳' : pad.playback === 'shuffle' ? '⤮' : '';

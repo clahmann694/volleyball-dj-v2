@@ -1,10 +1,14 @@
 import { SoundClip, SoundPad } from '../types';
 
-/** Welcher Sound startet, wenn der Button gedrueckt wird? */
-export function firstClip(pad: SoundPad): SoundClip | undefined {
+/**
+ * Welcher Sound startet, wenn der Button gedrueckt wird?
+ * `lastClipId` ist der Sound, der bei diesem Button zuletzt lief - er wird
+ * uebersprungen, damit nie zweimal hintereinander dasselbe Lied kommt.
+ */
+export function firstClip(pad: SoundPad, lastClipId: string | null = null): SoundClip | undefined {
   if (pad.clips.length === 0) return undefined;
   if (pad.playback === 'sequence') return pad.clips[0];
-  return randomClip(pad.clips, null);
+  return randomClip(pad.clips, lastClipId);
 }
 
 /** Wiederholt der Audio-Motor den Sound selbst (nahtlos)? */

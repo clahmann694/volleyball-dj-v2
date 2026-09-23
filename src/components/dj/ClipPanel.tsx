@@ -11,11 +11,11 @@ interface Props {
 
 /** Seitenleiste: alle Clips eines Buttons einzeln anwaehlbar. */
 export function ClipPanel({ pad, onClose }: Props) {
-  const { playing, play, stopAll } = useAudio();
+  const { playing, play, stopAll, lastClipOf } = useAudio();
   const style = { '--c': pad.color } as CSSProperties;
 
   const loop = isLooping(pad);
-  const playRandom = () => play(pad.id, randomClip(pad.clips, playing?.clipId ?? null), undefined, undefined, loop);
+  const playRandom = () => play(pad.id, randomClip(pad.clips, playing?.clipId ?? lastClipOf(pad.id)), undefined, undefined, loop);
 
   return (
     <aside className="w-72 shrink-0 flex flex-col bg-vsg-navy-900/95 backdrop-blur-xl border-l border-white/10" style={style}>
