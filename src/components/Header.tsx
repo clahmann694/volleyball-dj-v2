@@ -11,7 +11,7 @@ export function Header({ view, onChangeView }: HeaderProps) {
   const { team, clearTeam } = useTeam();
   const active = TEAMS.find(t => t.id === team);
   return (
-    <header className="shrink-0 h-14 px-4 flex items-center justify-between bg-vsg-navy-900/80 backdrop-blur-xl border-b border-white/10">
+    <header className="safe-top safe-x shrink-0 min-h-14 px-4 flex items-center justify-between bg-vsg-navy-900/80 backdrop-blur-xl border-b border-white/10">
       <h1 className="flex items-center gap-3 min-w-0">
         <span className="w-9 h-9 rounded-lg bg-white p-1 shrink-0 shadow">
           <img src={`${import.meta.env.BASE_URL}brand/vsg-logo-96.png`} alt="VSG Kleinsteinbach" className="w-full h-full object-contain" />

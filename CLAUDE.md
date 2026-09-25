@@ -129,6 +129,11 @@ catch failures: `bundle.ts` throws a "bitte neu laden" error, `audioTranscode.ts
 - In a team-filtered editor view the drop index refers to the **visible** pads; `realIndex()` maps it back to the real position so hidden pads of the other team are not reordered. Tested – don't simplify this away.
 - Drag & drop uses **pointer events**, not the HTML5 drag API, because the latter does not work on iOS Safari. Hit-testing compares the pointer against each tile's rect (`y` inside the tile's line and `x` past its centre, or the whole line above) so it also works for wrapped rows. Tiles are focusable and arrow keys move them – keep that fallback.
 - Touch targets ≥ 44px in the DJ view; the STOP button must always be visible (no spacebar on iPad).
+- **Mobile platform rules** (applied 2026-09-25 after auditing against Emil Kowalski's `mobile-native` skill; the remaining items — tap highlight, `touch-action: manipulation`, `user-select`, `overscroll-behavior`, `:active` feedback — were already in place):
+  - **Hover only where hover exists**: `.pad3d`/`.btn-stop` hover rules sit inside `@media (hover: hover) and (pointer: fine)` and Tailwind has `future.hoverOnlyWhenSupported`. Without it the hover state sticks on iPad after a tap and the pad stays brightened. Verified: rules active with a mouse, inactive under emulated `hover: none / pointer: coarse`.
+  - **Inputs are 16px on coarse pointers** (`@media (pointer: coarse)`). iOS Safari zooms the page when a field below 16px gets focus and never zooms back; the pad description field was 14px. Never "fix" this with `user-scalable=no` – that breaks zoom for everyone.
+  - **Safe areas**: `.safe-top` (header), `.safe-bottom` (transport bar), `.safe-x` (header, transport bar, board) use `env(safe-area-inset-*, 0px)`. Needed because `index.html` sets `viewport-fit=cover` and `black-translucent`, so an installed app paints under the status bar and home indicator. Zero on desktop, so nothing changes there.
+- Still open from that audit: `prefers-reduced-motion` (the playing pad pulses regardless) and the weak `cubic-bezier(0.25, 0.1, 0.25, 1)` press curve – the skill recommends a stronger ease-out. Both cosmetic, deliberately not done.
 
 ### Browser support (measured 2026-09-23 on the user's Mac)
 - **Safari 26 and Chrome 153: everything works** – those are her devices (Mac + iPad) and the test runner.

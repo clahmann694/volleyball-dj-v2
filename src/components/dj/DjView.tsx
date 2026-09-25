@@ -38,7 +38,7 @@ export function DjView({ panelPadId, onOpenPanel, onClosePanel, onGoToDev }: DjV
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex-1 min-h-0 flex">
+      <div className="safe-x flex-1 min-h-0 flex">
         <main className="flex-1 min-h-0 overflow-y-auto p-2">
           {!hasAnySound && (
             <div className="mb-3 rounded-2xl border border-vsg-cyan/50 bg-vsg-cyan/10 p-4 flex flex-wrap items-center gap-3">

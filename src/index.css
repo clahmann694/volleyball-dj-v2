@@ -30,6 +30,31 @@ body {
   outline-offset: 2px;
 }
 
+/* iOS Safari zoomt die Seite, sobald ein Feld mit weniger als 16px Fokus bekommt -
+   und zoomt nicht zurueck. Nur auf groben Zeigern anheben, damit das Layout am Mac bleibt. */
+@media (pointer: coarse) {
+  input:not([type='range']):not([type='file']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Auf dem Home-Bildschirm zeichnet die App bis unter Statusleiste und Home-Indikator
+   (viewport-fit=cover). Diese Klassen halten den Inhalt davon frei. */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-x {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
 button {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -147,8 +172,12 @@ button {
     -webkit-hyphens: auto;
   }
 
-  .pad3d:not(:disabled):hover {
-    filter: brightness(1.08);
+  /* Ohne diese Abfrage bliebe der Hover auf dem iPad nach dem Tippen haengen:
+     die Taste waere dauerhaft aufgehellt, bis man woanders hintippt. */
+  @media (hover: hover) and (pointer: fine) {
+    .pad3d:not(:disabled):hover {
+      filter: brightness(1.08);
+    }
   }
 
   /* gedrueckt / spielt: Kappe sinkt in den Sockel */
@@ -182,8 +211,10 @@ button {
     box-shadow: 0 4px 20px rgba(233, 80, 85, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
-  .btn-stop:not(:disabled):hover {
-    transform: scale(1.06);
+  @media (hover: hover) and (pointer: fine) {
+    .btn-stop:not(:disabled):hover {
+      transform: scale(1.06);
+    }
   }
 
   .btn-stop:not(:disabled):active {
