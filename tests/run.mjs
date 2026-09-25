@@ -8,6 +8,8 @@
  * Ziehen, Export/Import, Migration. Beendet sich mit Exit-Code 1 bei Fehlern.
  */
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash, randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -16,6 +18,18 @@ import { createFixtures } from './fixtures.mjs';
 
 const PORT = 3100;
 const BASE = process.env.BASE_URL ?? `http://localhost:${PORT}/`;
+
+// Eingebautes Dev-Passwort: der Testlauf gibt Vite ein eigenes mit, damit die
+// Suite das echte nicht kennen muss (gleiche Hash-Bildung wie scripts/set-dev-password.mjs)
+const portInUse = port => fetch(`http://localhost:${port}/`).then(() => true, () => false);
+
+const TEST_PW = 'volley25';
+const lockSalt = randomBytes(16);
+const LOCK = {
+  salt: lockSalt.toString('base64'),
+  hash: createHash('sha256').update(Buffer.concat([lockSalt, Buffer.from(TEST_PW, 'utf8')])).digest('base64'),
+  hint: 'Verein + Jahr',
+};
 let failures = 0;
 const ok = (cond, label, detail = '') => {
   console.log(`${cond ? '  ✓' : '  ✗'} ${label}${detail ? '  (' + detail + ')' : ''}`);
@@ -35,7 +49,18 @@ async function waitFor(url, ms = 30000) {
 async function main() {
   let vite = null;
   if (!process.env.BASE_URL) {
-    vite = spawn('npx', ['vite', '--port', String(PORT), '--strictPort', '--no-open'], { stdio: 'ignore' });
+    // Vite direkt starten, nicht ueber npx: sonst trifft vite.kill() nur npx und
+    // der eigentliche Server bleibt als Waise auf dem Port - der naechste Lauf
+    // redet dann mit einem alten Server (anderes Test-Salz, alter Code).
+    if (await portInUse(PORT)) {
+      console.error(`Port ${PORT} ist belegt - vermutlich ein verwaister Vite-Server eines frueheren Laufs. Bitte beenden (lsof -ti:${PORT} | xargs kill).`);
+      process.exit(1);
+    }
+    // fileURLToPath statt .pathname: der Projektpfad enthaelt ein Leerzeichen
+    vite = spawn(process.execPath, [fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url)), '--port', String(PORT), '--strictPort', '--no-open'], {
+      stdio: 'ignore',
+      env: { ...process.env, VITE_DEV_LOCK_SALT: LOCK.salt, VITE_DEV_LOCK_HASH: LOCK.hash, VITE_DEV_LOCK_HINT: LOCK.hint },
+    });
     if (!(await waitFor(BASE))) throw new Error('Dev-Server startet nicht');
   }
   const fx = createFixtures();
@@ -75,8 +100,15 @@ async function main() {
   /** DJ -> Dev geht nur ueber die Sicherheitsabfrage (oder den Sperrbildschirm) */
   const goDev = async () => {
     await p.click('header button:has-text("Dev")');
-    const dialog = p.locator('[role=alertdialog]');
-    if (await dialog.count()) await dialog.locator('button:has-text("Ja, zur Dev-Ansicht")').click();
+    // Frisches Geraet: erst der Sperrbildschirm; entsperrtes Geraet: nur die Rueckfrage
+    const pw = p.locator('#dev-pw');
+    if (await pw.count()) {
+      await pw.fill(TEST_PW);
+      await p.click('form button:has-text("Entsperren")');
+    } else {
+      const dialog = p.locator('[role=alertdialog]');
+      if (await dialog.count()) await dialog.locator('button:has-text("Ja, zur Dev-Ansicht")').click();
+    }
     // Auf einem Geraet ohne Sounds kommt zuerst die Startansicht
     const start = p.locator('button:has-text("Buttons anzeigen")');
     if (await start.count()) await start.click();
@@ -103,6 +135,9 @@ async function main() {
     ok((await p.locator('button.pad3d').count()) === 3, 'DJ zeigt 3 Buttons');
 
     console.log('\n1b) Sicherheitsabfrage vor der Dev-Ansicht');
+    // Ab hier wie auf einem eigenen, bereits entsperrten Geraet - der Weg ueber
+    // den Sperrbildschirm (fremdes Geraet) wird in 10b eigens geprueft
+    await p.evaluate(h => localStorage.setItem('vbdj-v2-dev-unlocked', h), LOCK.hash);
     await p.click('header button:has-text("Dev")');
     ok((await p.locator('[role=alertdialog]').count()) === 1, 'Abfrage erscheint');
     await p.click('[role=alertdialog] button:has-text("Abbrechen")');
@@ -390,6 +425,35 @@ async function main() {
       }
       const wiederholt = gespielt.filter((x, i) => i > 0 && x === gespielt[i - 1]);
       ok(wiederholt.length === 0, 'Zehnmal gedrückt, nie zweimal dasselbe Lied', gespielt.join(' → '));
+      // Drei Sounds: die juengsten zwei sind gesperrt, also kommen alle drei reihum durch (kein A B A mehr)
+      const zuFrueh = gespielt.filter((x, i) => i > 1 && (x === gespielt[i - 1] || x === gespielt[i - 2]));
+      ok(zuFrueh.length === 0, 'Bei drei Sounds kommt keiner wieder, bevor die anderen beiden dran waren', gespielt.join(' → '));
+
+      // Eigenschaftstest der Zufallswahl direkt am Modul: Mindestabstand bis zur Wiederkehr
+      const abstand = await p.evaluate(async () => {
+        const m = await import('/src/utils/playback.ts');
+        const messe = n => {
+          const clips = Array.from({ length: n }, (_, i) => ({ id: 'c' + i }));
+          const recent = [];
+          const zuletzt = new Map();
+          let minAbstand = Infinity;
+          const gesehen = new Set();
+          for (let t = 0; t < 400; t++) {
+            const c = m.randomClip(clips, recent);
+            gesehen.add(c.id);
+            if (zuletzt.has(c.id)) minAbstand = Math.min(minAbstand, t - zuletzt.get(c.id));
+            zuletzt.set(c.id, t);
+            const idx = recent.indexOf(c.id); if (idx >= 0) recent.splice(idx, 1);
+            recent.push(c.id);
+          }
+          return { n, minAbstand, alle: gesehen.size === n, sperre: m.excludeCount(n) };
+        };
+        return [2, 3, 4, 6, 20].map(messe);
+      });
+      const erwartet = { 2: 2, 3: 3, 4: 3, 6: 4, 20: 11 };
+      for (const r of abstand) {
+        ok(r.minAbstand >= erwartet[r.n] && r.alle, `${r.n} Sounds: ein Lied kommt frühestens nach ${erwartet[r.n] - 1} anderen wieder`, `gemessen ${r.minAbstand - 1}, gesperrt werden ${r.sperre}, alle gespielt: ${r.alle}`);
+      }
       ok(new Set(gespielt).size >= 2, 'Es wechselt wirklich zwischen den Sounds', `${new Set(gespielt).size} verschiedene`);
 
       // Auch ein Ansichtswechsel darf das Gedaechtnis nicht loeschen
@@ -404,62 +468,58 @@ async function main() {
       await sleep(200);
     }
 
-    console.log('\n10b) Passwortschutz der Dev-Ansicht');
+    console.log('\n10b) Eingebauter Passwortschutz der Dev-Ansicht');
     {
-      await goDev();
-      // setzen
-      await p.click('button:has-text("Mit Passwort schützen")');
-      await p.locator('input[placeholder="Neues Passwort"]').fill('volley25');
-      await p.locator('input[placeholder="Noch einmal"]').fill('volley25');
-      await p.locator('input[placeholder^="Merkhilfe"]').fill('Verein + Jahr');
-      await p.click('form button:has-text("Speichern")');
-      await sleep(250);
-      const gespeichert = await p.evaluate(() => { const l = JSON.parse(localStorage.getItem('vbdj-v2-dev-lock') || 'null'); return l && { hatSalt: !!l.salt, hatHash: !!l.hash, hint: l.hint, klartext: JSON.stringify(l).includes('volley25') }; });
-      ok(gespeichert?.hatSalt && gespeichert.hatHash && !gespeichert.klartext, 'Passwort gespeichert, nicht im Klartext', JSON.stringify(gespeichert));
-
-      // sperrt beim naechsten Wechsel
+      // Wie ein fremdes Geraet, das nur den Link bekommen hat: kein Entsperr-Merker
+      await p.evaluate(() => localStorage.removeItem('vbdj-v2-dev-unlocked'));
       await p.click('header button:has-text("DJ")');
       await p.waitForSelector('button.pad3d');
       await p.click('header button:has-text("Dev")');
       await p.waitForSelector('#dev-pw');
+      ok(true, 'Fremdes Gerät: Sperrbildschirm statt einfacher Rückfrage');
       ok((await p.locator('text=Merkhilfe: Verein + Jahr').count()) === 1, 'Sperrbildschirm zeigt die Merkhilfe');
 
-      // falsches Passwort
-      await p.fill('#dev-pw', 'falsch');
-      await p.click('button:has-text("Entsperren")');
-      await sleep(250);
-      ok((await p.locator('text=Passwort stimmt nicht').count()) === 1 && (await p.locator('#dev-pw').count()) === 1, 'Falsches Passwort wird abgewiesen');
+      await p.click('[role=alertdialog] button:has-text("Abbrechen")');
+      ok((await p.locator('#dev-pw').count()) === 0 && (await p.locator('button.pad3d').count()) > 0, 'Abbrechen lässt die DJ-Ansicht stehen');
 
-      // richtiges Passwort
-      await p.fill('#dev-pw', 'volley25');
-      await p.click('button:has-text("Entsperren")');
+      await p.click('header button:has-text("Dev")');
+      await p.waitForSelector('#dev-pw');
+      for (const w of ['falsch', 'nochfalsch', 'volley']) {
+        await p.fill('#dev-pw', w);
+        await p.click('form button:has-text("Entsperren")');
+        await sleep(200);
+      }
+      ok((await p.locator('text=Passwort stimmt nicht').count()) === 1 && (await p.locator('#dev-pw').count()) === 1, 'Falsche Passwörter werden abgewiesen');
+      ok((await p.locator('text=Passwort vergessen').count()) === 0 && (await p.locator('button:has-text("Sperre entfernen")').count()) === 0, 'Auch nach drei Fehlversuchen kein Weg an der Sperre vorbei');
+
+      await p.fill('#dev-pw', TEST_PW);
+      await p.click('form button:has-text("Entsperren")');
       await p.waitForSelector('text=Einrichtung');
-      ok(true, 'Richtiges Passwort öffnet die Dev-Ansicht');
+      const merker = await p.evaluate(() => localStorage.getItem('vbdj-v2-dev-unlocked'));
+      ok(merker !== null && !merker.includes(TEST_PW), 'Richtiges Passwort öffnet und wird als Hash gemerkt', (merker || '').slice(0, 12) + '…');
 
-      // bleibt in dieser Sitzung offen
+      // Der Merker ueberlebt ein Neuladen - eigene Geraete fragen nur einmal
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d');
+      await p.reload();
+      await p.click('button:has-text("Herren 1")');
+      await p.waitForSelector('button.pad3d');
+      await p.click('header button:has-text("Dev")');
+      ok((await p.locator('#dev-pw').count()) === 0 && (await p.locator('[role=alertdialog] button:has-text("Ja, zur Dev-Ansicht")').count()) === 1, 'Nach Neuladen bleibt das Gerät entsperrt – nur noch die kurze Rückfrage');
+      await p.click('[role=alertdialog] button:has-text("Ja, zur Dev-Ansicht")');
+      await p.waitForSelector('text=Einrichtung');
+      ok(!(await p.evaluate(() => (localStorage.getItem('vbdj-v2-board') || '').includes('dev-unlocked'))), 'Der Merker steckt nicht in der Einrichtung');
+
+      // Geraet wieder sperren, z. B. bevor das iPad weitergegeben wird
+      await p.click('button:has-text("Dieses Gerät wieder sperren")');
+      ok((await p.evaluate(() => localStorage.getItem('vbdj-v2-dev-unlocked'))) === null, 'Gerät lässt sich wieder sperren');
       await p.click('header button:has-text("DJ")');
       await p.waitForSelector('button.pad3d');
       await p.click('header button:has-text("Dev")');
-      const nochmal = await p.locator('#dev-pw').count();
-      if (nochmal) { await p.fill('#dev-pw', 'volley25'); await p.click('button:has-text("Entsperren")'); }
-      else { const c = p.locator('[role=alertdialog] button:has-text("Ja, zur Dev-Ansicht")'); if (await c.count()) await c.click(); }
+      ok((await p.locator('#dev-pw').count()) === 1, 'Danach fragt der Wechsel wieder nach dem Passwort');
+      await p.fill('#dev-pw', TEST_PW);
+      await p.click('form button:has-text("Entsperren")');
       await p.waitForSelector('text=Einrichtung');
-      ok(nochmal === 0, 'Einmal entsperrt bleibt es bis zum Neuladen offen');
-
-      // Bundle traegt das Passwort nicht mit
-      const imBundle = await p.evaluate(() => JSON.stringify(JSON.parse(localStorage.getItem('vbdj-v2-board'))).includes('dev-lock'));
-      ok(!imBundle, 'Die Sperre steckt nicht in der Einrichtung');
-
-      // entfernen: erst mit falschem, dann mit richtigem Passwort
-      await p.click('button:has-text("Sperre entfernen")');
-      await p.locator('input[aria-label="Aktuelles Passwort zum Entfernen"]').fill('falsch');
-      await p.click('form button[type=submit]:has-text("Entfernen")');
-      await sleep(250);
-      ok((await p.evaluate(() => localStorage.getItem('vbdj-v2-dev-lock'))) !== null, 'Falsches Passwort entfernt die Sperre nicht');
-      await p.locator('input[aria-label="Aktuelles Passwort zum Entfernen"]').fill('volley25');
-      await p.click('form button[type=submit]:has-text("Entfernen")');
-      await sleep(300);
-      ok((await p.evaluate(() => localStorage.getItem('vbdj-v2-dev-lock'))) === null, 'Sperre wieder entfernt');
     }
 
     console.log('\n11) Bildschirm wachhalten');

@@ -1,23 +1,36 @@
 /**
- * Zugangssperre für die Dev-Ansicht.
+ * Zugangssperre für die Dev-Ansicht – fest in die App eingebaut.
  *
- * WICHTIG: Das ist KEIN echter Schutz. Die App läuft nur im Browser, ohne
- * Server – wer die Entwicklerwerkzeuge kennt, kommt daran vorbei. Der Zweck
- * ist, dass niemand am Kampfgericht aus Versehen oder Neugier in die
- * Dev-Ansicht gerät und dort etwas löscht.
+ * Das Passwort wird beim Veröffentlichen festgelegt (`npm run set-password`
+ * schreibt Salt + SHA-256-Wert nach `src/config/devLock.json`) und gilt damit
+ * auf JEDEM Gerät, das die App öffnet – auch bei jemandem, der nur den Link
+ * bekommen hat. Ein Gerät, auf dem das Passwort einmal richtig eingegeben
+ * wurde, merkt sich das (`vbdj-v2-dev-unlocked`); gespeichert wird dabei der
+ * Hash, sodass ein neues Passwort automatisch alle Geräte wieder sperrt.
  *
- * Das Passwort selbst wird nie gespeichert, nur ein Salt und der SHA-256-Wert
- * darüber – damit es nicht im Klartext im Browserspeicher liegt.
- * Die Sperre gilt pro Gerät und wandert bewusst NICHT im .vbdj-Bundle mit.
+ * WICHTIG: Das ist KEIN echter Schutz. Die App läuft ohne Server – wer die
+ * Entwicklerwerkzeuge kennt, kommt daran vorbei. Es verhindert, dass jemand
+ * beiläufig in die Dev-Ansicht gerät. Die Tests überschreiben die Konfiguration
+ * per VITE_DEV_LOCK_* (siehe tests/run.mjs).
  */
 
-const KEY = 'vbdj-v2-dev-lock';
+import builtIn from '../config/devLock.json';
 
-interface StoredLock {
+const UNLOCK_KEY = 'vbdj-v2-dev-unlocked';
+
+interface LockConfig {
   salt: string;
   hash: string;
   /** Eigene Gedächtnisstütze, wird auf dem Sperrbildschirm angezeigt */
   hint: string;
+}
+
+function config(): LockConfig | null {
+  const env = import.meta.env;
+  const salt: string = env.VITE_DEV_LOCK_SALT ?? builtIn.salt ?? '';
+  const hash: string = env.VITE_DEV_LOCK_HASH ?? builtIn.hash ?? '';
+  const hint: string = env.VITE_DEV_LOCK_HINT ?? builtIn.hint ?? '';
+  return salt && hash ? { salt, hash, hint } : null;
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -27,19 +40,7 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 function fromBase64(s: string): Uint8Array {
-  const bin = atob(s);
-  return Uint8Array.from(bin, c => c.charCodeAt(0));
-}
-
-function read(): StoredLock | null {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
-    const lock = JSON.parse(raw) as StoredLock;
-    return lock.salt && lock.hash ? lock : null;
-  } catch {
-    return null;
-  }
+  return Uint8Array.from(atob(s), c => c.charCodeAt(0));
 }
 
 async function digest(password: string, salt: Uint8Array): Promise<string> {
@@ -51,33 +52,51 @@ async function digest(password: string, salt: Uint8Array): Promise<string> {
   return toBase64(new Uint8Array(await crypto.subtle.digest('SHA-256', data)));
 }
 
-/** Ist die Dev-Ansicht auf diesem Gerät gesperrt? */
+/** Ist überhaupt ein Passwort eingebaut? */
 export function isLocked(): boolean {
-  return read() !== null;
+  return config() !== null;
 }
 
-/** Selbst gewählte Gedächtnisstütze (leer, wenn keine hinterlegt) */
 export function lockHint(): string {
-  return read()?.hint ?? '';
+  return config()?.hint ?? '';
 }
 
-export async function setPassword(password: string, hint: string): Promise<void> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const lock: StoredLock = { salt: toBase64(salt), hash: await digest(password, salt), hint: hint.trim().slice(0, 80) };
-  localStorage.setItem(KEY, JSON.stringify(lock));
-}
-
-export async function verifyPassword(password: string): Promise<boolean> {
-  const lock = read();
-  if (!lock) return true;
+/** Wurde das Passwort auf diesem Gerät schon einmal richtig eingegeben? */
+export function isUnlockedHere(): boolean {
+  const c = config();
+  if (!c) return true;
   try {
-    return (await digest(password, fromBase64(lock.salt))) === lock.hash;
+    return localStorage.getItem(UNLOCK_KEY) === c.hash;
   } catch {
     return false;
   }
 }
 
-/** Sperre entfernen. Sounds und Einrichtung bleiben unberührt. */
-export function removePassword(): void {
-  localStorage.removeItem(KEY);
+export function rememberUnlock(): void {
+  const c = config();
+  if (!c) return;
+  try {
+    localStorage.setItem(UNLOCK_KEY, c.hash);
+  } catch {
+    /* privater Modus o. ä. – dann fragt die App beim nächsten Mal eben wieder */
+  }
+}
+
+/** Dieses Gerät wieder sperren, z. B. bevor man das iPad aus der Hand gibt. */
+export function forgetUnlock(): void {
+  try {
+    localStorage.removeItem(UNLOCK_KEY);
+  } catch {
+    /* s. o. */
+  }
+}
+
+export async function verifyPassword(password: string): Promise<boolean> {
+  const c = config();
+  if (!c) return true;
+  try {
+    return (await digest(password, fromBase64(c.salt))) === c.hash;
+  } catch {
+    return false;
+  }
 }

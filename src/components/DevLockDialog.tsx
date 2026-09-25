@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { lockHint, removePassword, verifyPassword } from '../utils/devLock';
+import { lockHint, rememberUnlock, verifyPassword } from '../utils/devLock';
 
 interface Props {
   onUnlock: () => void;
@@ -11,7 +11,6 @@ export function DevLockDialog({ onUnlock, onCancel }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [attempts, setAttempts] = useState(0);
-  const [resetting, setResetting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const hint = lockHint();
 
@@ -20,6 +19,7 @@ export function DevLockDialog({ onUnlock, onCancel }: Props) {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (await verifyPassword(password)) {
+      rememberUnlock();
       onUnlock();
       return;
     }
@@ -27,11 +27,6 @@ export function DevLockDialog({ onUnlock, onCancel }: Props) {
     setError('Passwort stimmt nicht.');
     setPassword('');
     inputRef.current?.focus();
-  };
-
-  const doReset = () => {
-    removePassword();
-    onUnlock();
   };
 
   return (
@@ -82,27 +77,12 @@ export function DevLockDialog({ onUnlock, onCancel }: Props) {
           </div>
         </form>
 
-        {/* Nach mehreren Fehlversuchen ein Ausweg - sonst waere man auf dem
-            Geraet dauerhaft ausgesperrt. Sounds bleiben dabei erhalten. */}
-        {attempts >= 3 && !resetting && (
-          <button onClick={() => setResetting(true)} className="mt-4 text-xs text-white/40 hover:text-white/70 underline">
-            Passwort vergessen?
-          </button>
-        )}
-        {resetting && (
-          <div className="mt-4 rounded-xl bg-amber-400/10 border border-amber-400/30 p-3">
-            <p className="text-sm text-amber-200">
-              Sperre entfernen? Deine Buttons und Sounds bleiben vollständig erhalten – nur das Passwort wird gelöscht.
-            </p>
-            <div className="mt-3 flex gap-2">
-              <button onClick={() => setResetting(false)} className="flex-1 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-medium">
-                Doch nicht
-              </button>
-              <button onClick={doReset} className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold">
-                Sperre entfernen
-              </button>
-            </div>
-          </div>
+        {/* Bewusst KEIN Ausweg im Dialog - sonst koennte jeder Besucher die
+            Sperre einfach wegklicken. Geaendert wird das Passwort nur im Projekt. */}
+        {attempts >= 3 && (
+          <p className="mt-4 text-xs text-white/40">
+            Das Passwort lässt sich nur beim Veröffentlichen der App ändern, nicht hier.
+          </p>
         )}
       </div>
     </div>

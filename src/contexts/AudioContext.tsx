@@ -46,7 +46,8 @@ interface AudioContextType extends AudioState {
   /** Wird aufgerufen, wenn ein Sound von selbst zu Ende geht (nicht bei Stop/Fade) */
   subscribeEnded: (cb: (info: PlayingClip) => void) => () => void;
   /** Welcher Sound lief bei dieser Taste zuletzt? (fuer „nie zweimal hintereinander") */
-  lastClipOf: (padId: string) => string | null;
+  /** Zuletzt gespielte Sounds eines Buttons, aelteste zuerst (fuer die Zufallswahl) */
+  recentClipsOf: (padId: string) => readonly string[];
   fadeOut: (ms?: number) => void;
   setVolume: (volume: number) => void;
   clearError: () => void;
@@ -122,7 +123,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const soundIdRef = useRef<number | null>(null);
   const endedListeners = useRef(new Set<(info: PlayingClip) => void>());
   // Je Taste der zuletzt gestartete Sound - bleibt auch nach dem Stoppen erhalten
-  const lastClipByPad = useRef(new Map<string, string>());
+  // Verlauf pro Button, damit die Zufallswahl die juengsten Sounds ueberspringen kann
+  const recentByPad = useRef(new Map<string, string[]>());
+  const HISTORY_MAX = 64;
   // Laufnummer: verhindert, dass ein langsam geladener Sound einen neueren ueberholt
   const tokenRef = useRef(0);
 
@@ -175,7 +178,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       const gain = Math.min(1, Math.max(0, gainOverride ?? clip.gain ?? 1));
       gainRef.current = gain;
       const info: PlayingClip = { padId, clipId: clip.id };
-      lastClipByPad.current.set(padId, clip.id);
+      {
+        const list = (recentByPad.current.get(padId) ?? []).filter(id => id !== clip.id);
+        list.push(clip.id);
+        recentByPad.current.set(padId, list.slice(-HISTORY_MAX));
+      }
       dispatch({ type: 'START', playing: info, clipName: clip.name, cue, fileDuration: clip.duration });
 
       let stored;
@@ -272,7 +279,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'PAUSED', isPaused: false });
   }, []);
 
-  const lastClipOf = useCallback((padId: string) => lastClipByPad.current.get(padId) ?? null, []);
+  const recentClipsOf = useCallback((padId: string): readonly string[] => recentByPad.current.get(padId) ?? [], []);
 
   const subscribeEnded = useCallback((cb: (info: PlayingClip) => void) => {
     endedListeners.current.add(cb);
@@ -304,8 +311,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const clearError = useCallback(() => dispatch({ type: 'CLEAR_ERROR' }), []);
 
   const value = useMemo<AudioContextType>(
-    () => ({ ...state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, lastClipOf }),
-    [state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, lastClipOf]
+    () => ({ ...state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, recentClipsOf }),
+    [state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, recentClipsOf]
   );
 
   return <AudioCtx.Provider value={value}>{children}</AudioCtx.Provider>;

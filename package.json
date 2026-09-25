@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
-    "test": "node tests/run.mjs"
+    "test": "node tests/run.mjs",
+    "set-password": "node scripts/set-dev-password.mjs"
   },
   "dependencies": {
     "howler": "^2.2.4",

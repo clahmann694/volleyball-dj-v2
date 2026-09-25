@@ -6,33 +6,28 @@ import { Header } from './components/Header';
 import { TeamPicker } from './components/TeamPicker';
 import { ConfirmDevDialog } from './components/ConfirmDevDialog';
 import { DevLockDialog } from './components/DevLockDialog';
-import { isLocked } from './utils/devLock';
+import { isLocked, isUnlockedHere } from './utils/devLock';
 import { DjView } from './components/dj/DjView';
 import { DeveloperView } from './components/dev/DeveloperView';
 import { ViewMode } from './types';
 import { useWakeLock } from './hooks/useWakeLock';
 
-const VIEW_KEY = 'vbdj-v2-view';
-
 function AppContent() {
-  const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) === 'dev' ? 'dev' : 'dj'));
+  // Immer in der DJ-Ansicht starten - wie die Mannschaftsfrage bei jedem Start.
+  // Frueher kam die zuletzt offene Ansicht wieder; wer zuletzt in Dev war, landete
+  // beim naechsten Laden ohne Rueckfrage dort (Beschwerde 2026-09-25).
+  const [view, setView] = useState<ViewMode>('dj');
   const [panelPadId, setPanelPadId] = useState<string | null>(null);
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
   // Sicherheitsabfrage bzw. Sperrbildschirm vor dem Wechsel in die Dev-Ansicht
   const [askDev, setAskDev] = useState(false);
   const [askPassword, setAskPassword] = useState(false);
-  // Einmal entsperrt, bleibt es bis zum Neuladen offen - sonst tippt man beim
-  // Einrichten dauernd das Passwort
-  const [devUnlocked, setDevUnlocked] = useState(false);
   const { stopAll } = useAudio();
   const { team } = useTeam();
 
   // Im Spielbetrieb darf sich das iPad nicht sperren
   useWakeLock(!!team && view === 'dj');
 
-  useEffect(() => {
-    localStorage.setItem(VIEW_KEY, view);
-  }, [view]);
 
   // Leertaste = Panik-Stopp, Escape = Panel/Editor schliessen
   useEffect(() => {
@@ -71,12 +66,13 @@ function AppContent() {
   const changeView = useCallback(
     (next: ViewMode) => {
       if (next === 'dev' && view === 'dj') {
-        // Mit Passwort ersetzt der Sperrbildschirm die einfache Rückfrage
-        if (isLocked() && !devUnlocked) setAskPassword(true);
+        // Eingebautes Passwort: Sperrbildschirm statt Rückfrage, bis dieses
+        // Gerät einmal entsperrt wurde (merkt sich der Browser)
+        if (isLocked() && !isUnlockedHere()) setAskPassword(true);
         else setAskDev(true);
       } else applyView(next);
     },
-    [view, applyView, devUnlocked]
+    [view, applyView]
   );
 
   // Ohne gewaehlte Mannschaft zuerst fragen
@@ -87,10 +83,7 @@ function AppContent() {
       {askDev && <ConfirmDevDialog onConfirm={() => applyView('dev')} onCancel={() => setAskDev(false)} />}
       {askPassword && (
         <DevLockDialog
-          onUnlock={() => {
-            setDevUnlocked(true);
-            applyView('dev');
-          }}
+          onUnlock={() => applyView('dev')}
           onCancel={() => setAskPassword(false)}
         />
       )}

@@ -20,7 +20,7 @@ export function DjView({ panelPadId, onOpenPanel, onClosePanel, onGoToDev }: DjV
   // Kein einziger Sound auf diesem Geraet: entweder ganz neu oder ein zweites Geraet,
   // auf das die Einrichtung noch nicht uebertragen wurde
   const hasAnySound = allPads(board).some(p => p.clips.length > 0);
-  const { play, subscribeEnded } = useAudio();
+  const { play, subscribeEnded, recentClipsOf } = useAudio();
   const pad = panelPadId ? padIndex.get(panelPadId)?.pad : undefined;
 
   // Auto-Weiterspielen: Ist ein Sound von selbst zu Ende, entscheidet der
@@ -30,10 +30,10 @@ export function DjView({ panelPadId, onOpenPanel, onClosePanel, onGoToDev }: DjV
       subscribeEnded(({ padId, clipId }) => {
         const p = padIndex.get(padId)?.pad;
         if (!p) return;
-        const next = nextClip(p, clipId);
+        const next = nextClip(p, clipId, recentClipsOf(p.id));
         if (next) play(padId, next);
       }),
-    [subscribeEnded, padIndex, play]
+    [subscribeEnded, padIndex, play, recentClipsOf]
   );
 
   return (
