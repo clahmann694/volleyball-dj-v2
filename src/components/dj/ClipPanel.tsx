@@ -18,7 +18,7 @@ export function ClipPanel({ pad, onClose }: Props) {
   const playRandom = () => play(pad.id, randomClip(pad.clips, playing?.clipId ?? lastClipOf(pad.id)), undefined, undefined, loop);
 
   return (
-    <aside className="w-72 shrink-0 flex flex-col bg-vsg-navy-900/95 backdrop-blur-xl border-l border-white/10" style={style}>
+    <aside className="anim-panel w-72 shrink-0 flex flex-col bg-vsg-navy-900/95 backdrop-blur-xl border-l border-white/10" style={style}>
       <div className="flex items-center gap-3 p-4 border-b border-white/10">
         <span className="w-4 h-4 rounded-full shrink-0" style={{ background: 'var(--c)', boxShadow: '0 0 10px var(--c)' }} />
         <div className="flex-1 min-w-0">

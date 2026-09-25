@@ -16,12 +16,12 @@ export function ConfirmDevDialog({ onConfirm, onCancel }: Props) {
   useEffect(() => cancelRef.current?.focus(), []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={onCancel} role="presentation">
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={onCancel} role="presentation">
       <div
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="dev-dialog-title"
-        className="w-full max-w-md rounded-2xl bg-vsg-navy-900 border border-amber-400/40 shadow-2xl p-6"
+        className="anim-dialog w-full max-w-md rounded-2xl bg-vsg-navy-900 border border-amber-400/40 shadow-2xl p-6"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">

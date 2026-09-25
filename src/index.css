@@ -4,6 +4,59 @@
 
 :root {
   color-scheme: dark;
+
+  /* Kraeftige Kurven - die eingebauten CSS-Kurven sind zu weich.
+     Ease-out startet schnell und fuehlt sich bei gleicher Dauer flotter an. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* --- Einblenden von Dialogen, Seitenleiste und Meldungen ---------------------
+   Alles hier erscheint selten (Start, Editor, Fehlermeldung), deshalb ist
+   Bewegung angebracht. Die Tasten selbst bleiben bewusst ohne Animation:
+   sie werden hundertfach am Abend gedrueckt. */
+@keyframes anim-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes anim-dialog {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes anim-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes anim-panel {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes anim-toast {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.anim-fade { animation: anim-fade 180ms var(--ease-out) both; }
+.anim-dialog { animation: anim-dialog 200ms var(--ease-out) both; }
+.anim-rise { animation: anim-rise 240ms var(--ease-out) both; }
+.anim-panel { animation: anim-panel 220ms var(--ease-out) both; }
+.anim-toast { animation: anim-toast 160ms var(--ease-out) both; }
+
+/* Wer im System Bewegung reduziert, bekommt keine - inklusive des Pulsierens
+   der spielenden Taste. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 html,
@@ -88,7 +141,7 @@ button {
        komplett zurueck, statt auf die Zeile davor zurueckzufallen. */
     background: var(--c);
     box-shadow: 0 14px 22px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.55);
-    transition: box-shadow 120ms, filter 120ms;
+    transition: box-shadow 120ms var(--ease-out), filter 120ms var(--ease-out);
     cursor: pointer;
   }
 
@@ -109,7 +162,7 @@ button {
     background: var(--c);
     filter: brightness(1.12);
     box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.6), inset 0 2px 1px rgba(255, 255, 255, 0.6), inset 0 -4px 6px rgba(0, 0, 0, 0.35);
-    transition: transform 80ms, box-shadow 80ms;
+    transition: transform 80ms var(--ease-out), box-shadow 80ms var(--ease-out);
   }
 
   /* Glanzlicht auf der Kappe */

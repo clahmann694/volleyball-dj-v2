@@ -9,7 +9,8 @@ export function TeamPicker() {
   const { board } = useBoard();
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 bg-vsg-navy-950/95 backdrop-blur-sm">
+    <div className="anim-fade fixed inset-0 z-50 flex flex-col items-center justify-center p-6 bg-vsg-navy-950/95 backdrop-blur-sm">
+      <div className="anim-rise flex flex-col items-center w-full">
       <img src={`${import.meta.env.BASE_URL}brand/vsg-logo-96.png`} alt="" className="w-16 h-16 object-contain mb-4 bg-white rounded-xl p-1.5" />
       <h1 className="text-2xl font-bold text-center">Für wen legst du auf?</h1>
       <p className="text-vsg-ice/70 text-sm mt-2 text-center">Danach siehst du nur die Buttons dieser Mannschaft.</p>
@@ -33,6 +34,7 @@ export function TeamPicker() {
             </button>
           );
         })}
+      </div>
       </div>
     </div>
   );

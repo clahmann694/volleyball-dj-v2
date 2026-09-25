@@ -27,7 +27,7 @@ export function TransportBar() {
   return (
     <footer className="safe-bottom safe-x relative shrink-0 border-t border-white/10 bg-vsg-navy-900/90 backdrop-blur-xl px-4 py-2 flex items-center gap-4" style={style}>
       {error && (
-        <div className="absolute left-4 right-4 -top-12 flex items-center gap-2 rounded-lg bg-vsg-red/95 px-3 py-2 text-sm shadow-lg">
+        <div className="anim-toast absolute left-4 right-4 -top-12 flex items-center gap-2 rounded-lg bg-vsg-red/95 px-3 py-2 text-sm shadow-lg">
           <span className="flex-1">{error}</span>
           <button onClick={clearError} aria-label="Meldung schließen" className="px-1">✕</button>
         </div>

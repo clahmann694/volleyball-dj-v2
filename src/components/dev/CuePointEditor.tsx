@@ -141,8 +141,8 @@ export function CuePointEditor({ clipRef, onClose }: Props) {
   const playhead = isPreviewing ? audio.position : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="w-full max-w-xl rounded-2xl bg-vsg-navy-900 border border-white/10 shadow-2xl" style={style} onClick={e => e.stopPropagation()}>
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="anim-dialog w-full max-w-xl rounded-2xl bg-vsg-navy-900 border border-white/10 shadow-2xl" style={style} onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 p-4 border-b border-white/10">
           <h3 className="text-lg font-bold">Cue-Points setzen</h3>
           <span className="flex-1 text-right text-sm text-white/50 truncate">
