@@ -5,6 +5,8 @@ import { TeamProvider, useTeam } from './contexts/TeamContext';
 import { Header } from './components/Header';
 import { TeamPicker } from './components/TeamPicker';
 import { ConfirmDevDialog } from './components/ConfirmDevDialog';
+import { DevLockDialog } from './components/DevLockDialog';
+import { isLocked } from './utils/devLock';
 import { DjView } from './components/dj/DjView';
 import { DeveloperView } from './components/dev/DeveloperView';
 import { ViewMode } from './types';
@@ -16,8 +18,12 @@ function AppContent() {
   const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(VIEW_KEY) === 'dev' ? 'dev' : 'dj'));
   const [panelPadId, setPanelPadId] = useState<string | null>(null);
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
-  // Sicherheitsabfrage vor dem Wechsel in die Dev-Ansicht
+  // Sicherheitsabfrage bzw. Sperrbildschirm vor dem Wechsel in die Dev-Ansicht
   const [askDev, setAskDev] = useState(false);
+  const [askPassword, setAskPassword] = useState(false);
+  // Einmal entsperrt, bleibt es bis zum Neuladen offen - sonst tippt man beim
+  // Einrichten dauernd das Passwort
+  const [devUnlocked, setDevUnlocked] = useState(false);
   const { stopAll } = useAudio();
   const { team } = useTeam();
 
@@ -41,6 +47,7 @@ function AppContent() {
         setPanelPadId(null);
         setEditingClipId(null);
         setAskDev(false);
+        setAskPassword(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -57,15 +64,19 @@ function AppContent() {
     setPanelPadId(null);
     setEditingClipId(null);
     setAskDev(false);
+    setAskPassword(false);
   }, []);
 
   // Von DJ nach Dev nur nach Bestaetigung - dort kann man alles loeschen
   const changeView = useCallback(
     (next: ViewMode) => {
-      if (next === 'dev' && view === 'dj') setAskDev(true);
-      else applyView(next);
+      if (next === 'dev' && view === 'dj') {
+        // Mit Passwort ersetzt der Sperrbildschirm die einfache Rückfrage
+        if (isLocked() && !devUnlocked) setAskPassword(true);
+        else setAskDev(true);
+      } else applyView(next);
     },
-    [view, applyView]
+    [view, applyView, devUnlocked]
   );
 
   // Ohne gewaehlte Mannschaft zuerst fragen
@@ -74,6 +85,15 @@ function AppContent() {
   return (
     <div className="h-full flex flex-col text-white">
       {askDev && <ConfirmDevDialog onConfirm={() => applyView('dev')} onCancel={() => setAskDev(false)} />}
+      {askPassword && (
+        <DevLockDialog
+          onUnlock={() => {
+            setDevUnlocked(true);
+            applyView('dev');
+          }}
+          onCancel={() => setAskPassword(false)}
+        />
+      )}
       <Header view={view} onChangeView={changeView} />
       {view === 'dj' ? (
         <DjView panelPadId={panelPadId} onOpenPanel={setPanelPadId} onClosePanel={() => setPanelPadId(null)} onGoToDev={() => changeView('dev')} />

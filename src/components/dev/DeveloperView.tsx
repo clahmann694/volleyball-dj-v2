@@ -4,6 +4,7 @@ import { useBoard } from '../../contexts/BoardContext';
 import { PAD_COLORS } from '../../config/defaultBoard';
 import { ALL_TEAM_IDS, TEAMS } from '../../config/teams';
 import { BundleControls } from './BundleControls';
+import { DevLockSettings } from './DevLockSettings';
 import { LayoutEditor } from './LayoutEditor';
 import { PadCard } from './PadCard';
 import { CuePointEditor } from './CuePointEditor';
@@ -33,8 +34,9 @@ export function DeveloperView({ editingClipId, onEditClip, onCloseEditor }: Prop
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
-      <div className="max-w-4xl mx-auto px-4 pt-4">
+      <div className="max-w-4xl mx-auto px-4 pt-4 space-y-3">
         <BundleControls />
+        <DevLockSettings />
       </div>
 
       {/* volle Breite, damit der Umbruch genauso aussieht wie im Spiel */}

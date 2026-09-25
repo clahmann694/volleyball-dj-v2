@@ -17,6 +17,8 @@ The board is a list of **rows**, each holding any number of **pads** (buttons su
 
 Switching **DJ → Dev asks for confirmation** (`ConfirmDevDialog`, focus on "Abbrechen", Escape cancels) because the Dev view can change and delete everything – requested 2026-09-21 so nobody lands there by accident during a match. Dev → DJ needs no confirmation.
 
+**Optional password lock on the Dev view** (`utils/devLock.ts`, `DevLockDialog`, `dev/DevLockSettings`; requested 2026-09-25). When a password is set, `DevLockDialog` *replaces* the confirm dialog on DJ → Dev (it carries the same warning). **It is a deterrent, not security** – the app has no server, so anyone with dev tools can bypass it; the UI says so explicitly and so must every answer to the user. Stored under `vbdj-v2-dev-lock` as `{salt, hash, hint}` (SHA-256 over salt+password via `crypto.subtle`, which needs https/localhost) – never the plaintext. Per device, **deliberately not part of the `.vbdj` bundle**. Once unlocked it stays open until the page reloads (`devUnlocked` in `App`), otherwise she would retype it constantly while editing. After three wrong attempts the dialog offers "Passwort vergessen?" → remove the lock; that escape hatch is intentional (being locked out of editing on a device is worse than a curious helper clicking through two confirmations) and it touches only the lock key, never sounds or board. Removing the lock from the settings card requires the current password (inline field, no `window.prompt`). Covered by test block 10b.
+
 Two views:
 - **DJ view** – the dashboard used during games: 3D arcade-style pads (CSS only: `.pad3d` base + `.pad3d__cap`), side panel for multi-clip pads, transport bar (now playing, fade out, STOP, volume). Space = stop all.
 - **Dev view** – setup: a team switch (Beide / Herren 1 / Damen 1), a full-width **arrangement editor** (`LayoutEditor`) where pads are dragged into place, plus one settings card per pad (name, colour, team chips, sounds, cue) and `.vbdj` export/import. Per-pad arrow buttons were removed – she found them cumbersome.
@@ -70,6 +72,7 @@ src/
 │   ├── dj/                   # DjView, SoundBoard (rows), SoundPad (3D button), ClipPanel, TransportBar
 │   └── dev/                  # DeveloperView, LayoutEditor (drag & drop), PadCard, ColorSwatches, ClipRow, CuePointEditor, Waveform, BundleControls
 ├── hooks/useWakeLock.ts      # screen stays on during the match
+├── utils/devLock.ts          # optional per-device password for the Dev view (hash only, never in the bundle)
 ├── utils/                    # audioFormat, audioTranscode (video → AAC/M4A), mp4Demux (lossless AAC extraction), bundle (zip, lazy JSZip), waveform (peaks + RMS level), playback (first/next/random clip), formatTime, id
 └── tests/ (repo root)        # run.mjs (e2e suite, `npm test`), fixtures.mjs (WAV generator)
 └── App.tsx                   # providers, view state, keyboard shortcuts (Space, Escape)
@@ -96,7 +99,7 @@ The user has real sounds and cue points in Safari on her MacBook and iPhone/iPad
 (`clahmann694.github.io`). Nothing on the dev server (`localhost:3000`, a different origin) or in headless-Chrome
 tests can touch that. What CAN destroy her data – never do these without an explicit, separate confirmation:
 - renaming the IndexedDB (`vbdj-v2` / store `files`), the localStorage keys (`vbdj-v2-board`, `vbdj-v2-last-export`,
-  `vbdj-v2-last-change`), or the GitHub Pages URL/repo name (new origin = empty storage from the app's view);
+  `vbdj-v2-last-change`; `vbdj-v2-dev-lock` only holds the optional Dev password), or the GitHub Pages URL/repo name (new origin = empty storage from the app's view);
 - a data-model bump without a tested `migrateBoard` path (test with a real fixture of the previous version; the
   loader writes `vbdj-v2-board.backup-v<N>-<date>` before migrating – keep that);
 - "Zurücksetzen" and bundle import replace everything on that device (both `window.confirm`).

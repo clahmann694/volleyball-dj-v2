@@ -72,7 +72,7 @@ async function main() {
     }
   };
 
-  /** DJ -> Dev geht nur ueber die Sicherheitsabfrage */
+  /** DJ -> Dev geht nur ueber die Sicherheitsabfrage (oder den Sperrbildschirm) */
   const goDev = async () => {
     await p.click('header button:has-text("Dev")');
     const dialog = p.locator('[role=alertdialog]');
@@ -402,6 +402,64 @@ async function main() {
       ok((await clipInFooter()) !== zuletzt, 'Auch nach einem Ansichtswechsel kein direktes Wiederholen', `${zuletzt} → ${await clipInFooter()}`);
       await p.keyboard.press('Space');
       await sleep(200);
+    }
+
+    console.log('\n10b) Passwortschutz der Dev-Ansicht');
+    {
+      await goDev();
+      // setzen
+      await p.click('button:has-text("Mit Passwort schützen")');
+      await p.locator('input[placeholder="Neues Passwort"]').fill('volley25');
+      await p.locator('input[placeholder="Noch einmal"]').fill('volley25');
+      await p.locator('input[placeholder^="Merkhilfe"]').fill('Verein + Jahr');
+      await p.click('form button:has-text("Speichern")');
+      await sleep(250);
+      const gespeichert = await p.evaluate(() => { const l = JSON.parse(localStorage.getItem('vbdj-v2-dev-lock') || 'null'); return l && { hatSalt: !!l.salt, hatHash: !!l.hash, hint: l.hint, klartext: JSON.stringify(l).includes('volley25') }; });
+      ok(gespeichert?.hatSalt && gespeichert.hatHash && !gespeichert.klartext, 'Passwort gespeichert, nicht im Klartext', JSON.stringify(gespeichert));
+
+      // sperrt beim naechsten Wechsel
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d');
+      await p.click('header button:has-text("Dev")');
+      await p.waitForSelector('#dev-pw');
+      ok((await p.locator('text=Merkhilfe: Verein + Jahr').count()) === 1, 'Sperrbildschirm zeigt die Merkhilfe');
+
+      // falsches Passwort
+      await p.fill('#dev-pw', 'falsch');
+      await p.click('button:has-text("Entsperren")');
+      await sleep(250);
+      ok((await p.locator('text=Passwort stimmt nicht').count()) === 1 && (await p.locator('#dev-pw').count()) === 1, 'Falsches Passwort wird abgewiesen');
+
+      // richtiges Passwort
+      await p.fill('#dev-pw', 'volley25');
+      await p.click('button:has-text("Entsperren")');
+      await p.waitForSelector('text=Einrichtung');
+      ok(true, 'Richtiges Passwort öffnet die Dev-Ansicht');
+
+      // bleibt in dieser Sitzung offen
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d');
+      await p.click('header button:has-text("Dev")');
+      const nochmal = await p.locator('#dev-pw').count();
+      if (nochmal) { await p.fill('#dev-pw', 'volley25'); await p.click('button:has-text("Entsperren")'); }
+      else { const c = p.locator('[role=alertdialog] button:has-text("Ja, zur Dev-Ansicht")'); if (await c.count()) await c.click(); }
+      await p.waitForSelector('text=Einrichtung');
+      ok(nochmal === 0, 'Einmal entsperrt bleibt es bis zum Neuladen offen');
+
+      // Bundle traegt das Passwort nicht mit
+      const imBundle = await p.evaluate(() => JSON.stringify(JSON.parse(localStorage.getItem('vbdj-v2-board'))).includes('dev-lock'));
+      ok(!imBundle, 'Die Sperre steckt nicht in der Einrichtung');
+
+      // entfernen: erst mit falschem, dann mit richtigem Passwort
+      await p.click('button:has-text("Sperre entfernen")');
+      await p.locator('input[aria-label="Aktuelles Passwort zum Entfernen"]').fill('falsch');
+      await p.click('form button[type=submit]:has-text("Entfernen")');
+      await sleep(250);
+      ok((await p.evaluate(() => localStorage.getItem('vbdj-v2-dev-lock'))) !== null, 'Falsches Passwort entfernt die Sperre nicht');
+      await p.locator('input[aria-label="Aktuelles Passwort zum Entfernen"]').fill('volley25');
+      await p.click('form button[type=submit]:has-text("Entfernen")');
+      await sleep(300);
+      ok((await p.evaluate(() => localStorage.getItem('vbdj-v2-dev-lock'))) === null, 'Sperre wieder entfernt');
     }
 
     console.log('\n11) Bildschirm wachhalten');
