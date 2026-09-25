@@ -119,6 +119,7 @@ catch failures: `bundle.ts` throws a "bitte neu laden" error, `audioTranscode.ts
 
 - Audio files are per device (IndexedDB). Never assume a `fileId` has a blob – handle "missing" gracefully (`play()` shows an error toast).
 - Deleting a clip/pad deletes its blob; import/reset call `deleteOrphanFiles`.
+- **Bundle import must stay reachable without the Dev password** (`components/ImportBundleButton.tsx`, requested 2026-09-25: "the app must be usable without the password"). It is rendered in the DJ view's no-sounds banner, on the `TeamPicker` start screen (subtle link – the natural setup moment, seen on every start) and in the Dev `EmptyState`; `BundleControls` keeps its own handler with the flash messages. The shared button asks `window.confirm` only when the device already has sounds. Don't move import back behind the lock.
 - The bundle import `<input type=file>` has **no `accept` attribute on purpose**: iOS maps `accept` extensions to UTIs and greys out files with unknown extensions such as `.vbdj` in the picker (found on the user's iPhone 2026-09-21). Validate after reading instead. Don't rename bundles to `.zip` either – Safari on macOS auto-expands "safe" downloads and the user loses the file.
 - On iPad the app must be added to the home screen, otherwise Safari may evict site data after 7 days without use.
 

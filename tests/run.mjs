@@ -522,6 +522,27 @@ async function main() {
       await p.waitForSelector('text=Einrichtung');
     }
 
+    console.log('\n10c) Einrichtung laden ohne Passwort (DJ-Ansicht)');
+    {
+      // Wie ein Helfer, der nur Link und .vbdj-Datei bekommen hat: leeres Geraet, kein Entsperr-Merker
+      await p.evaluate(() => localStorage.clear());
+      await p.reload();
+      ok((await p.locator('[data-role="import-bundle"]').count()) === 1, 'Startfrage bietet „Einrichtung laden“ an');
+      await p.click('button:has-text("Herren 1")');
+      await p.waitForSelector('text=Auf diesem Gerät sind noch keine Sounds');
+      const banner = p.locator('main > div').first();
+      ok((await banner.locator('[data-role="import-bundle"]').count()) === 1 && (await banner.locator('text=kein Passwort').count()) === 1, 'Banner ohne Sounds bietet den Import an und sagt, dass kein Passwort nötig ist');
+      await banner.locator('[data-role="import-bundle"]').setInputFiles(file);
+      await p.waitForSelector('text=Auf diesem Gerät sind noch keine Sounds', { state: 'detached', timeout: 15000 });
+      const b2 = await board();
+      const mix2 = b2.rows.flatMap(r => r.pads).find(x => x.name === 'Mix');
+      ok(mix2?.clips.length === 3 && (await p.locator('#dev-pw').count()) === 0 && (await p.locator('text=Einrichtung').count()) === 0, 'Bundle in der DJ-Ansicht geladen – ohne Dev-Ansicht, ohne Passwort', `Mix hat ${mix2?.clips.length} Sounds, Banner weg`);
+      await p.click('header button:has-text("Dev")');
+      ok((await p.locator('#dev-pw').count()) === 1, 'Die Dev-Ansicht bleibt trotzdem gesperrt');
+      await p.keyboard.press('Escape');
+      await sleep(150);
+    }
+
     console.log('\n11) Bildschirm wachhalten');
     ok(await p.evaluate(() => 'wakeLock' in navigator), 'Wake-Lock-API vorhanden');
   } finally {

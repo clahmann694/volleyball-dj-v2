@@ -1,6 +1,7 @@
 import { useBoard } from '../contexts/BoardContext';
 import { useTeam } from '../contexts/TeamContext';
 import { TEAMS } from '../config/teams';
+import { ImportBundleButton } from './ImportBundleButton';
 import { padsForTeam } from '../types';
 
 /** Startfrage: für welche Mannschaft wird aufgelegt? */
@@ -34,6 +35,10 @@ export function TeamPicker() {
             </button>
           );
         })}
+      </div>
+      {/* Ohne Passwort erreichbar: Einrichtung von einem anderen Geraet uebernehmen */}
+      <div className="mt-10">
+        <ImportBundleButton subtle label="Einrichtung (.vbdj) von einem anderen Gerät laden" />
       </div>
       </div>
     </div>

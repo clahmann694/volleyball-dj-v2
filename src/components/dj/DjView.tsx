@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useBoard } from '../../contexts/BoardContext';
 import { useAudio } from '../../contexts/AudioContext';
 import { nextClip } from '../../utils/playback';
+import { ImportBundleButton } from '../ImportBundleButton';
 import { allPads } from '../../types';
 import { SoundBoard } from './SoundBoard';
 import { ClipPanel } from './ClipPanel';
@@ -46,12 +47,13 @@ export function DjView({ panelPadId, onOpenPanel, onClosePanel, onGoToDev }: DjV
                 <p className="font-bold">Auf diesem Gerät sind noch keine Sounds.</p>
                 <p className="text-sm text-vsg-ice mt-1">
                   Die Sounds liegen immer nur auf dem Gerät, auf dem sie importiert wurden – der Link zur App bringt sie nicht mit.
-                  Hast du sie schon auf einem anderen Gerät eingerichtet? Dann dort <strong>Dev → Exportieren</strong>, die
-                  .vbdj-Datei per AirDrop hierher schicken und hier <strong>Dev → Importieren</strong>.
+                  Hast du eine <strong>.vbdj-Datei</strong> bekommen (per AirDrop, Mail …)? Dann lade sie direkt hier – dafür braucht es
+                  kein Passwort. Erstellt wird sie auf dem eingerichteten Gerät unter <strong>Dev → Exportieren</strong>.
                 </p>
               </div>
-              <button onClick={onGoToDev} className="h-10 px-4 rounded-lg bg-vsg-blue hover:bg-vsg-cyan font-semibold text-sm">
-                Zur Dev-Ansicht
+              <ImportBundleButton className="h-10 px-4 text-sm" />
+              <button onClick={onGoToDev} className="h-10 px-3 rounded-lg bg-white/10 hover:bg-white/20 font-medium text-sm">
+                Selbst einrichten (Dev)
               </button>
             </div>
           )}

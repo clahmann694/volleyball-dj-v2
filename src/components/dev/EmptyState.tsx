@@ -1,5 +1,4 @@
-import { ChangeEvent, useRef, useState } from 'react';
-import { useBoard } from '../../contexts/BoardContext';
+import { ImportBundleButton } from '../ImportBundleButton';
 
 /**
  * Erster Blick in die Dev-Ansicht auf einem Geraet ohne Sounds.
@@ -8,27 +7,6 @@ import { useBoard } from '../../contexts/BoardContext';
  * oder mit den Buttons anfangen.
  */
 export function EmptyState({ onShowBoard }: { onShowBoard: () => void }) {
-  const { importBoard, busy } = useBoard();
-  const [working, setWorking] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  const doImport = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setWorking(true);
-    setMessage(null);
-    try {
-      await importBoard(file);
-    } catch (err) {
-      console.error(err);
-      setMessage(`„${file.name}“ ist keine VB-DJ-Datei. Wähle die exportierte .vbdj-Datei.`);
-    } finally {
-      setWorking(false);
-    }
-  };
-
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="max-w-xl mx-auto px-4 py-10 text-center">
@@ -44,14 +22,9 @@ export function EmptyState({ onShowBoard }: { onShowBoard: () => void }) {
             Du hast schon auf dem Mac (oder iPad) eingerichtet? Dort <strong>Exportieren</strong>, die .vbdj-Datei per AirDrop
             hierher schicken und hier laden – mit allen Buttons, Cue-Points und Sounds.
           </p>
-          <input ref={fileInput} type="file" hidden onChange={doImport} data-role="import-bundle" />
-          <button
-            onClick={() => fileInput.current?.click()}
-            disabled={busy || working}
-            className="mt-4 w-full py-3 rounded-xl bg-vsg-blue hover:bg-vsg-cyan disabled:opacity-50 font-bold"
-          >
-            {working ? 'Lade…' : '⬆ Einrichtung laden (.vbdj)'}
-          </button>
+          <div className="mt-4 flex flex-col items-stretch [&>span]:w-full [&>span]:items-stretch">
+            <ImportBundleButton className="w-full py-3 rounded-xl font-bold" />
+          </div>
         </div>
 
         {/* Neu anfangen */}
@@ -65,7 +38,6 @@ export function EmptyState({ onShowBoard }: { onShowBoard: () => void }) {
           </button>
         </div>
 
-        {message && <p className="mt-4 text-sm text-amber-300">{message}</p>}
       </div>
     </div>
   );
