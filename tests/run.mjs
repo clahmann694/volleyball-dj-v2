@@ -640,6 +640,81 @@ async function main() {
       await sleep(150);
     }
 
+    console.log('\n10d) Zweiter Druck auf den Button blendet aus');
+    {
+      // Deterministisch: „Ass!“ bekommt NUR den langen Ton (8 s, Modus einmal),
+      // damit das natuerliche Ende nie zufaellig ins Ausblenden faellt.
+      // „Block!“ bekommt zwei kurze Toene fuer genau diesen Grenzfall.
+      await p.evaluate(() => localStorage.clear());
+      await p.reload();
+      await p.click('button:has-text("Herren 1")');
+      await goDev();
+      const felder = p.locator('input[data-role="add-clips"]');
+      await felder.nth(0).setInputFiles([fx.lang]);
+      await p.waitForSelector('text=1 Datei hinzugefügt');
+      await felder.nth(1).setInputFiles([fx.kurz, fx.mittel]);
+      await p.waitForSelector('text=2 Dateien hinzugefügt');
+      await p.locator('div.rounded-2xl').filter({ has: p.locator('input[value="Block!"]') }).first()
+        .locator('button[role=radio]:has-text("Zufällig endlos")').click();
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d:not(.pad3d--empty)');
+
+      const laeuft = async () => !/Bereit/.test(await footer());
+      const starte = async name => {
+        await clickPad(name);
+        await p.waitForFunction(() => /-\d:\d\d/.test(document.querySelector('footer')?.innerText || ''), null, { timeout: 8000 });
+      };
+
+      // 1) Ausblenden statt abbrechen
+      await starte('Ass!');
+      await clickPad('Ass!');
+      await sleep(300);
+      ok(/Fade/.test(await footer()) && (await laeuft()), 'Zweiter Druck blendet aus, statt sofort abzubrechen', (await footer()).slice(0, 46));
+      await sleep(2200);
+      ok(!(await laeuft()), 'Nach dem Ausblenden ist Ruhe', (await footer()).slice(0, 46));
+
+      // 2) Waehrend des Ausblendens macht ein weiterer Druck sofort Schluss
+      await starte('Ass!');
+      await clickPad('Ass!');
+      await sleep(250);
+      ok(/Fade/.test(await footer()), 'Ausblenden läuft', (await footer()).slice(0, 46));
+      await clickPad('Ass!');
+      await sleep(300);
+      ok(!(await laeuft()), 'Noch ein Druck während des Ausblendens bricht sofort ab', (await footer()).slice(0, 46));
+
+      // 3) Faellt das natuerliche Ende ins Ausblenden, darf NICHTS nachstarten
+      await starte('Block!');
+      await p.waitForFunction(() => /-0:00/.test((document.querySelector('footer')?.innerText || '').replace(/\s+/g, ' ')), null, { timeout: 8000 });
+      await clickPad('Block!');
+      const nachgestartet = await p.evaluate(
+        () =>
+          new Promise(res => {
+            const t0 = Date.now();
+            const iv = setInterval(() => {
+              const t = (document.querySelector('footer')?.innerText || '').replace(/\s+/g, ' ');
+              if (/· \S/.test(t) && !/Fade/.test(t) && /-\d:\d\d/.test(t) && !/-0:00/.test(t)) { clearInterval(iv); res(t.slice(0, 40)); }
+              if (Date.now() - t0 > 3500) { clearInterval(iv); res(null); }
+            }, 60);
+          })
+      );
+      ok(!nachgestartet, 'Endet das Lied mitten im Ausblenden, startet kein neues', String(nachgestartet));
+      ok(!(await laeuft()), 'Danach ist Ruhe', (await footer()).slice(0, 46));
+
+      // 4) STOP schneidet weiterhin hart
+      await starte('Ass!');
+      await p.keyboard.press('Space');
+      await sleep(250);
+      ok(!(await laeuft()), 'STOP bleibt der harte Schnitt', (await footer()).slice(0, 46));
+
+      // 5) Pausiert: der Druck stoppt, statt ins Leere zu laufen
+      await starte('Ass!');
+      await p.click('footer button:has-text("Pause")');
+      await sleep(250);
+      await clickPad('Ass!');
+      await sleep(300);
+      ok(!(await laeuft()), 'Auch aus der Pause heraus stoppt der Button zuverlässig', (await footer()).slice(0, 46));
+    }
+
     console.log('\n11) Bildschirm wachhalten');
     ok(await p.evaluate(() => 'wakeLock' in navigator), 'Wake-Lock-API vorhanden');
   } finally {

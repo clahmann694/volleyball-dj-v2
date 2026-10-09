@@ -11,11 +11,12 @@ interface Props {
 
 /**
  * Eine 3D-Taste (Sockel + glaenzende Kappe, rein CSS).
- * Klick: spielt einen (bei mehreren: zufaelligen) Clip, erneuter Klick stoppt.
+ * Klick: spielt einen (bei mehreren: zufaelligen) Clip, erneuter Klick blendet
+ * ihn aus. Fuer den harten Schnitt gibt es STOP.
  * Die Ecke oben rechts oeffnet die Liste aller Clips.
  */
 export function SoundPad({ pad, onOpenPanel }: Props) {
-  const { playing, isPaused, play, stopAll, recentClipsOf } = useAudio();
+  const { playing, isPlaying, isPaused, isFading, play, stopAll, fadeOut, recentClipsOf } = useAudio();
   const isActive = playing?.padId === pad.id;
   const hasClips = pad.clips.length > 0;
   const style = { '--c': pad.color, '--t': padTextColor(pad.color) } as CSSProperties;
@@ -23,7 +24,11 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
   const handleClick = () => {
     if (!hasClips) return;
     if (isActive) {
-      stopAll();
+      // Zweiter Druck blendet aus statt hart abzubrechen. Nicht beim Ausblenden
+      // selbst (zweiter Druck soll dann sofort Schluss machen), nicht bei Pause
+      // und nicht waehrend des Ladens - da gibt es nichts auszublenden.
+      if (isPlaying && !isFading) fadeOut();
+      else stopAll();
       return;
     }
     const clip = firstClip(pad, recentClipsOf(pad.id));
@@ -37,7 +42,7 @@ export function SoundPad({ pad, onOpenPanel }: Props) {
         onClick={handleClick}
         disabled={!hasClips}
         aria-pressed={isActive}
-        title={hasClips ? pad.name : `${pad.name} – noch keine Sounds zugewiesen`}
+        title={!hasClips ? `${pad.name} – noch keine Sounds zugewiesen` : isActive ? `${pad.name} – nochmal drücken blendet aus` : pad.name}
         className={`pad3d ${isActive ? 'pad3d--active' : ''} ${isActive && isPaused ? 'pad3d--paused' : ''} ${!hasClips ? 'pad3d--empty' : ''}`}
       >
         <span className="pad3d__cap">

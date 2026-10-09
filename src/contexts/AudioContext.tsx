@@ -148,6 +148,9 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   // Howler-Sound-ID des laufenden Sounds - noetig, um nach Pause an derselben Stelle fortzusetzen
   const soundIdRef = useRef<number | null>(null);
   const endedListeners = useRef(new Set<(info: PlayingClip) => void>());
+  // Laeuft gerade ein Ausblenden? Dann darf ein zufaellig hineinfallendes
+  // natuerliches Ende NICHT das Auto-Weiterspielen ausloesen.
+  const fadingRef = useRef(false);
   // Je Taste der zuletzt gestartete Sound - bleibt auch nach dem Stoppen erhalten
   // Verlauf pro Button, damit die Zufallswahl die juengsten Sounds ueberspringen kann
   const recentByPad = useRef(new Map<string, string[]>());
@@ -175,6 +178,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
 
   /** Alles abraeumen, ohne Events auszuloesen */
   const teardown = useCallback(() => {
+    fadingRef.current = false;
     stopTicking();
     if (howlRef.current) {
       howlRef.current.off();
@@ -244,7 +248,11 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       };
       // Natuerliches Ende: erst aufraeumen, dann die Zuhoerer (Auto-Weiterspielen) informieren
       const ended = () => {
+        // Endet der Sound mitten im Ausblenden, ist das kein regulaeres Ende:
+        // sonst startet das Auto-Weiterspielen genau den Sound, der weg sollte.
+        const wurdeAusgeblendet = fadingRef.current;
         finish();
+        if (wurdeAusgeblendet) return;
         for (const cb of endedListeners.current) cb(info);
       };
 
@@ -327,6 +335,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     (ms = 1500) => {
       const howl = howlRef.current;
       if (!howl || !howl.playing()) return;
+      fadingRef.current = true;
       dispatch({ type: 'FADING', isFading: true });
       const current = howl.volume();
       howl.fade(typeof current === 'number' ? current : volumeRef.current, 0, ms);

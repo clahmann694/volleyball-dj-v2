@@ -76,7 +76,7 @@ export function TransportBar() {
 
       {/* Fade out */}
       <button
-        onClick={() => fadeOut(1500)}
+        onClick={() => fadeOut()}
         disabled={!isPlaying || isFading}
         className="hidden sm:flex items-center gap-2 px-4 py-3 rounded-xl border border-vsg-cyan/70 text-vsg-cyan hover:bg-vsg-cyan/15 disabled:opacity-40 disabled:hover:bg-transparent font-semibold text-sm"
       >
