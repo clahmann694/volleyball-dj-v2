@@ -7,6 +7,8 @@
  * bekommen hat. Ein Gerät, auf dem das Passwort einmal richtig eingegeben
  * wurde, merkt sich das (`vbdj-v2-dev-unlocked`); gespeichert wird dabei der
  * Hash, sodass ein neues Passwort automatisch alle Geräte wieder sperrt.
+ * Ein einzelnes Gerät lässt sich nicht aus der App heraus wieder sperren -
+ * die Karte dafür war der Nutzerin zu viel (2026-10-09).
  *
  * WICHTIG: Das ist KEIN echter Schutz. Die App läuft ohne Server – wer die
  * Entwicklerwerkzeuge kennt, kommt daran vorbei. Es verhindert, dass jemand
@@ -79,15 +81,6 @@ export function rememberUnlock(): void {
     localStorage.setItem(UNLOCK_KEY, c.hash);
   } catch {
     /* privater Modus o. ä. – dann fragt die App beim nächsten Mal eben wieder */
-  }
-}
-
-/** Dieses Gerät wieder sperren, z. B. bevor man das iPad aus der Hand gibt. */
-export function forgetUnlock(): void {
-  try {
-    localStorage.removeItem(UNLOCK_KEY);
-  } catch {
-    /* s. o. */
   }
 }
 

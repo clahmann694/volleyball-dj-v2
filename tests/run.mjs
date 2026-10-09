@@ -607,9 +607,9 @@ async function main() {
       await p.waitForSelector('text=Einrichtung');
       ok(!(await p.evaluate(() => (localStorage.getItem('vbdj-v2-board') || '').includes('dev-unlocked'))), 'Der Merker steckt nicht in der Einrichtung');
 
-      // Geraet wieder sperren, z. B. bevor das iPad weitergegeben wird
-      await p.click('button:has-text("Dieses Gerät wieder sperren")');
-      ok((await p.evaluate(() => localStorage.getItem('vbdj-v2-dev-unlocked'))) === null, 'Gerät lässt sich wieder sperren');
+      // Wie ein Geraet, das den Entsperr-Merker verloren hat (geloeschte Website-Daten,
+      // neues Passwort): Die Sperre muss wieder greifen.
+      await p.evaluate(() => localStorage.removeItem('vbdj-v2-dev-unlocked'));
       await p.click('header button:has-text("DJ")');
       await p.waitForSelector('button.pad3d');
       await p.click('header button:has-text("Dev")');
