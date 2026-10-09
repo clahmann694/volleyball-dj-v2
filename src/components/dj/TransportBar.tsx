@@ -5,7 +5,7 @@ import { formatTime } from '../../utils/formatTime';
 
 /** Untere Leiste: was laeuft, Fortschritt, Fade-out, STOP, Lautstaerke. */
 export function TransportBar() {
-  const { playing, clipName, isPlaying, isPaused, position, cue, fileDuration, volume, setVolume, stopAll, fadeOut, isFading, error, clearError, pause, resume } = useAudio();
+  const { playing, clipName, isPlaying, isPaused, position, cue, fileDuration, volume, setVolume, stopAll, fadeOut, isFading, error, clearError, pause, resume, queued, clearQueue } = useAudio();
   const { padIndex } = useBoard();
 
   // Fehlermeldungen verschwinden von selbst
@@ -16,6 +16,9 @@ export function TransportBar() {
   }, [error, clearError]);
 
   const pad = playing ? padIndex.get(playing.padId)?.pad : undefined;
+  // Vorgemerkter Sound - sichtbar, damit er im Spiel nie ueberrascht
+  const queuedPad = queued ? padIndex.get(queued.padId)?.pad : undefined;
+  const queuedClip = queuedPad?.clips.find(c => c.id === queued?.clipId);
   const start = cue?.start ?? 0;
   const end = cue?.end ?? fileDuration ?? null;
   const total = end != null && end > start ? end - start : null;
@@ -46,6 +49,18 @@ export function TransportBar() {
               {isPaused && <span className="text-xs text-amber-300 font-medium">pausiert</span>}
               {isFading && <span className="text-xs text-vsg-ice animate-pulse">Fade…</span>}
             </div>
+            {queuedClip && (
+              <button
+                onClick={clearQueue}
+                title="Vormerkung aufheben"
+                className="anim-toast mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full bg-vsg-cyan/15 border border-vsg-cyan/40 pl-2 pr-1.5 py-0.5 text-xs text-vsg-cyan hover:bg-vsg-cyan/25"
+              >
+                <span className="shrink-0">⏭ danach:</span>
+                <span className="truncate font-medium">{queuedClip.name}</span>
+                {queued && queued.padId !== playing.padId && <span className="shrink-0 text-vsg-cyan/60">({queuedPad?.name})</span>}
+                <span className="shrink-0 text-vsg-cyan/70">✕</span>
+              </button>
+            )}
             <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
               <div className="h-full rounded-full transition-[width] duration-100" style={{ width: `${progress}%`, background: 'var(--c)' }} />
             </div>

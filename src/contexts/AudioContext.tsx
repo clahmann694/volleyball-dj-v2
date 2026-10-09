@@ -1,6 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import { Howl } from 'howler';
 import { CuePoint, PlayingClip, SoundClip } from '../types';
+
+/** Vormerkung fuer „als Naechstes abspielen" - nur IDs, damit spaetere
+ *  Aenderungen an Cue-Points oder Lautstaerke beim Start noch greifen. */
+export interface QueuedClip {
+  padId: string;
+  clipId: string;
+}
 import { getFile } from '../storage/audioStore';
 import { howlerFormat } from '../utils/audioFormat';
 
@@ -25,6 +32,8 @@ interface AudioState {
   volume: number;
   isFading: boolean;
   error: string | null;
+  /** Vorgemerkter Sound: laeuft, sobald der aktuelle von selbst zu Ende ist */
+  queued: QueuedClip | null;
 }
 
 type AudioAction =
@@ -36,7 +45,8 @@ type AudioAction =
   | { type: 'VOLUME'; volume: number }
   | { type: 'FADING'; isFading: boolean }
   | { type: 'ERROR'; error: string }
-  | { type: 'CLEAR_ERROR' };
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'QUEUE'; queued: QueuedClip | null };
 
 interface AudioContextType extends AudioState {
   play: (padId: string, clip: SoundClip, cueOverride?: CuePoint, gainOverride?: number, loop?: boolean) => void;
@@ -48,6 +58,13 @@ interface AudioContextType extends AudioState {
   /** Welcher Sound lief bei dieser Taste zuletzt? (fuer „nie zweimal hintereinander") */
   /** Zuletzt gespielte Sounds eines Buttons, aelteste zuerst (fuer die Zufallswahl) */
   recentClipsOf: (padId: string) => readonly string[];
+  /**
+   * Sound vormerken. Gilt fuer seinen eigenen Button: Er startet, sobald ein
+   * Sound DIESES Buttons von selbst zu Ende ist - nicht nach einem anderen
+   * Button. STOP loescht die Vormerkung.
+   */
+  queueClip: (padId: string, clipId: string) => void;
+  clearQueue: () => void;
   fadeOut: (ms?: number) => void;
   setVolume: (volume: number) => void;
   clearError: () => void;
@@ -71,6 +88,7 @@ const initialState: AudioState = {
   volume: loadVolume(),
   isFading: false,
   error: null,
+  queued: null,
 };
 
 function reducer(state: AudioState, action: AudioAction): AudioState {
@@ -78,6 +96,12 @@ function reducer(state: AudioState, action: AudioAction): AudioState {
     case 'START':
       return {
         ...state,
+        // Startet genau der vorgemerkte Sound, ist die Vormerkung erledigt.
+        // Ein anderer Sound laesst sie stehen - sie gilt fuer ihren eigenen Button.
+        queued:
+          state.queued && state.queued.padId === action.playing.padId && state.queued.clipId === action.playing.clipId
+            ? null
+            : state.queued,
         playing: action.playing,
         clipName: action.clipName,
         cue: action.cue,
@@ -104,6 +128,8 @@ function reducer(state: AudioState, action: AudioAction): AudioState {
       return { ...state, error: action.error };
     case 'CLEAR_ERROR':
       return { ...state, error: null };
+    case 'QUEUE':
+      return { ...state, queued: action.queued };
     default:
       return state;
   }
@@ -168,7 +194,16 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     tokenRef.current++;
     teardown();
     dispatch({ type: 'STOPPED' });
+    // STOP raeumt auch die Vormerkung weg - sonst taucht sie Minuten spaeter
+    // mitten im Spiel wieder auf
+    dispatch({ type: 'QUEUE', queued: null });
   }, [teardown]);
+
+  const queueClip = useCallback((padId: string, clipId: string) => {
+    dispatch({ type: 'QUEUE', queued: { padId, clipId } });
+  }, []);
+
+  const clearQueue = useCallback(() => dispatch({ type: 'QUEUE', queued: null }), []);
 
   const play = useCallback(
     async (padId: string, clip: SoundClip, cueOverride?: CuePoint, gainOverride?: number, loop = false) => {
@@ -311,8 +346,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const clearError = useCallback(() => dispatch({ type: 'CLEAR_ERROR' }), []);
 
   const value = useMemo<AudioContextType>(
-    () => ({ ...state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, recentClipsOf }),
-    [state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, recentClipsOf]
+    () => ({ ...state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, recentClipsOf, queueClip, clearQueue }),
+    [state, play, pause, resume, stopAll, fadeOut, setVolume, clearError, subscribeEnded, recentClipsOf, queueClip, clearQueue]
   );
 
   return <AudioCtx.Provider value={value}>{children}</AudioCtx.Provider>;

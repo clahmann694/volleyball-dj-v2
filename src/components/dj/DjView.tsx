@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useBoard } from '../../contexts/BoardContext';
 import { useAudio } from '../../contexts/AudioContext';
-import { nextClip } from '../../utils/playback';
+import { isLooping, nextClip } from '../../utils/playback';
 import { ImportBundleButton } from '../ImportBundleButton';
 import { allPads } from '../../types';
 import { SoundBoard } from './SoundBoard';
@@ -21,7 +21,7 @@ export function DjView({ panelPadId, onOpenPanel, onClosePanel, onGoToDev }: DjV
   // Kein einziger Sound auf diesem Geraet: entweder ganz neu oder ein zweites Geraet,
   // auf das die Einrichtung noch nicht uebertragen wurde
   const hasAnySound = allPads(board).some(p => p.clips.length > 0);
-  const { play, subscribeEnded, recentClipsOf } = useAudio();
+  const { play, subscribeEnded, recentClipsOf, queued } = useAudio();
   const pad = panelPadId ? padIndex.get(panelPadId)?.pad : undefined;
 
   // Auto-Weiterspielen: Ist ein Sound von selbst zu Ende, entscheidet der
@@ -31,10 +31,18 @@ export function DjView({ panelPadId, onOpenPanel, onClosePanel, onGoToDev }: DjV
       subscribeEnded(({ padId, clipId }) => {
         const p = padIndex.get(padId)?.pad;
         if (!p) return;
+        // Vorgemerkter Sound geht vor - aber nur fuer seinen eigenen Button
+        if (queued && queued.padId === padId) {
+          const wunsch = p.clips.find(c => c.id === queued.clipId);
+          if (wunsch) {
+            play(padId, wunsch, undefined, undefined, isLooping(p));
+            return;
+          }
+        }
         const next = nextClip(p, clipId, recentClipsOf(p.id));
         if (next) play(padId, next);
       }),
-    [subscribeEnded, padIndex, play, recentClipsOf]
+    [subscribeEnded, padIndex, play, recentClipsOf, queued]
   );
 
   return (

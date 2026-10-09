@@ -468,6 +468,103 @@ async function main() {
       await sleep(200);
     }
 
+    console.log('\n10a) „Als Nächstes abspielen“ in der Songliste');
+    {
+      // Zwei Sounds, Modus „Zufällig endlos“: Nach „kurz“ kaeme von allein IMMER
+      // „mittel“ (der gerade gelaufene ist gesperrt). Wenn trotzdem „kurz“
+      // wiederkommt, kann das nur die Vormerkung gewesen sein.
+      await p.evaluate(() => localStorage.clear());
+      await p.reload();
+      await p.click('button:has-text("Herren 1")');
+      await goDev();
+      await p.locator('input[data-role="add-clips"]').first().setInputFiles([fx.kurz, fx.mittel]);
+      await p.waitForSelector('text=2 Dateien hinzugefügt');
+      await p.locator('div.rounded-2xl').filter({ has: p.locator('input[value="Ass!"]') }).first()
+        .locator('button[role=radio]:has-text("Zufällig endlos")').click();
+      await p.click('header button:has-text("DJ")');
+      await p.waitForSelector('button.pad3d:not(.pad3d--empty)');
+      await p.click('button[title="Alle Sounds dieses Buttons anzeigen"]');
+      await p.waitForSelector('aside button[title="Als Nächstes abspielen"]');
+
+      const zeile = name => p.locator('aside div.flex.items-stretch').filter({ hasText: name });
+      const warteAufClip = async (name, ms) => {
+        try { await p.waitForFunction(n => new RegExp('· ' + n + '\\b').test((document.querySelector('footer')?.innerText || '').replace(/\s+/g, ' ')), name, { timeout: ms }); return true; }
+        catch { return false; }
+      };
+      /**
+       * Welcher Sound startet als NAECHSTER? Erkennt auch den Neustart desselben
+       * Sounds - daran, dass die verstrichene Zeit zurueckspringt. Genau das
+       * braucht der Test: Zufall koennte den gerade gelaufenen nie waehlen.
+       */
+      const naechsterStart = ms =>
+        p.evaluate(
+          grenze =>
+            new Promise(res => {
+              const lies = () => {
+                const t = (document.querySelector('footer')?.innerText || '').replace(/\s+/g, ' ');
+                const name = (t.match(/· (\S+)/) || [])[1] ?? null;
+                const m = t.match(/(\d):(\d\d) -/);
+                return { name, sek: m ? +m[1] * 60 + +m[2] : null };
+              };
+              let vorher = lies();
+              const t0 = Date.now();
+              const iv = setInterval(() => {
+                const jetzt = lies();
+                const neuerName = jetzt.name && vorher.name && jetzt.name !== vorher.name;
+                const zurueckgesprungen = vorher.sek != null && jetzt.sek != null && jetzt.sek < vorher.sek;
+                if (jetzt.name && (neuerName || zurueckgesprungen)) { clearInterval(iv); res(jetzt.name); return; }
+                vorher = jetzt;
+                if (Date.now() - t0 > grenze) { clearInterval(iv); res(null); }
+              }, 80);
+            }),
+          ms
+        );
+
+      // Kontrolle: ohne Vormerkung folgt zwingend „mittel“ (der gerade gelaufene ist gesperrt)
+      await zeile('kurz').locator('button:has-text("▶")').click();
+      ok(await warteAufClip('kurz', 6000), 'Kontrolle: „kurz“ läuft');
+      ok((await naechsterStart(6000)) === 'mittel', 'Kontrolle: ohne Vormerkung folgt von allein „mittel“');
+      await p.keyboard.press('Space');
+      await sleep(250);
+
+      // Jetzt mit Vormerkung auf denselben Sound, der gerade laeuft:
+      // Der Zufall koennte ihn NIE waehlen - kommt er trotzdem, war es die Vormerkung.
+      await zeile('kurz').locator('button:has-text("▶")').click();
+      ok(await warteAufClip('kurz', 6000), '„kurz“ läuft wieder');
+      await zeile('kurz').locator('button[title="Als Nächstes abspielen"]').click();
+      ok((await zeile('kurz').locator('text=als Nächstes').count()) === 1, 'Die Songliste markiert den vorgemerkten Sound');
+      ok((await p.locator('footer button[title="Vormerkung aufheben"]').count()) === 1, 'Die Transportleiste zeigt die Vormerkung an');
+
+      ok((await naechsterStart(6000)) === 'kurz', 'Statt des Zufallssounds startet der vorgemerkte Sound');
+      ok((await p.locator('footer button[title="Vormerkung aufheben"]').count()) === 0, 'Nach dem Abspielen ist die Vormerkung weg');
+      ok((await naechsterStart(6000)) === 'mittel', 'Danach geht der Zufall normal weiter');
+      await p.keyboard.press('Space');
+      await sleep(250);
+
+      // Aufheben per Knopf
+      await zeile('mittel').locator('button[title="Als Nächstes abspielen"]').click();
+      ok((await zeile('mittel').locator('text=als Nächstes').count()) === 1, 'Vormerkung lässt sich setzen');
+      await zeile('mittel').locator('button[title="Vormerkung aufheben"]').click();
+      ok((await zeile('mittel').locator('text=als Nächstes').count()) === 0, 'Vormerkung lässt sich wieder aufheben');
+
+      // STOP raeumt sie weg
+      await zeile('mittel').locator('button[title="Als Nächstes abspielen"]').click();
+      await p.keyboard.press('Space');
+      await sleep(250);
+      ok((await p.locator('aside >> text=als Nächstes').count()) === 0, 'STOP löscht die Vormerkung');
+
+      // Dauerschleife: kein „als Nächstes“, weil der Sound nie von selbst endet
+      await goDev();
+      await p.locator('div.rounded-2xl').filter({ has: p.locator('input[value="Ass!"]') }).first()
+        .locator('button[role=radio]:has-text("Dauerschleife")').click();
+      await p.click('header button:has-text("DJ")');
+      await p.click('button[title="Alle Sounds dieses Buttons anzeigen"]');
+      await p.waitForSelector('aside');
+      ok((await p.locator('aside button[title="Als Nächstes abspielen"]').count()) === 0 && (await p.locator('aside >> text=kein „als Nächstes“').count()) === 1,
+        'Dauerschleife bietet keine Vormerkung an und erklärt warum');
+      await p.locator('aside button[aria-label="Schließen"]').click();
+    }
+
     console.log('\n10b) Eingebauter Passwortschutz der Dev-Ansicht');
     {
       // Wie ein fremdes Geraet, das nur den Link bekommen hat: kein Entsperr-Merker
